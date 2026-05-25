@@ -15,7 +15,11 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-// Health check
+// Root + health check
+app.get('/', (req, res) => {
+  res.json({ name: 'LinguaPlay API', version: '1.0.0', status: 'ok' });
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
