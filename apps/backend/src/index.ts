@@ -20,6 +20,7 @@ app.use(express.json());
 app.get('/', (_req, res) => {
   res.json({ name: 'LinguaPlay API', version: '1.0.0', status: 'ok' });
 });
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
