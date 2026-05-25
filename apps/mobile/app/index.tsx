@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Redirect } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../utils/secureStorage';
 import { useAuthStore } from '../stores/authStore';
 
 export default function Index() {
@@ -9,7 +9,7 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    SecureStore.getItemAsync('auth_token')
+    secureStorage.getItem('auth_token')
       .then((t) => { if (t) setToken(t); })
       .finally(() => setLoading(false));
   }, []);
