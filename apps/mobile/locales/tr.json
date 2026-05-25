@@ -1,0 +1,49 @@
+{
+  "common": {
+    "loading": "Yükleniyor...",
+    "error": "Bir hata oluştu",
+    "retry": "Tekrar Dene",
+    "cancel": "İptal",
+    "save": "Kaydet",
+    "delete": "Sil",
+    "back": "Geri"
+  },
+  "auth": {
+    "login": "Giriş Yap",
+    "register": "Kayıt Ol",
+    "logout": "Çıkış Yap",
+    "email": "E-posta",
+    "password": "Şifre",
+    "confirmPassword": "Şifre Tekrar"
+  },
+  "tabs": {
+    "home": "Ana Sayfa",
+    "vocabulary": "Kelimeler",
+    "roleplay": "Konuşma",
+    "content": "İçerik",
+    "profile": "Profil"
+  },
+  "levels": {
+    "UNSET": "Belirlenmedi",
+    "A1": "A1 - Başlangıç",
+    "A2": "A2 - Temel",
+    "B1": "B1 - Orta",
+    "B2": "B2 - Üst Orta",
+    "C1": "C1 - İleri",
+    "C2": "C2 - Uzman"
+  },
+  "vocabulary": {
+    "title": "Kelimelerim",
+    "empty": "Henüz kelime yok",
+    "startReview": "Tekrar Başlat"
+  },
+  "roleplay": {
+    "title": "Konuşma Pratiği",
+    "customScene": "Özel Senaryo",
+    "presetScenes": "Hazır Sahneler"
+  },
+  "content": {
+    "title": "İçerik Analizi",
+    "empty": "Henüz içerik eklenmedi"
+  }
+}
