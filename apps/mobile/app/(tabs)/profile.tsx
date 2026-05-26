@@ -98,7 +98,11 @@ export default function Profile() {
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
-      <ScrollView className="flex-1 px-5">
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
         <View className="py-5">
           <Text className="text-2xl font-bold text-text1">Profil</Text>
         </View>
