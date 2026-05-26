@@ -75,10 +75,19 @@ export default function RoleplayChat() {
     mutationFn: (content: string) =>
       roleplayApi.sendMessage(sessionId, content).then((r) => r.data),
     onSuccess: (data) => {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: data.reply, timestamp: new Date().toISOString(), correction: null },
-      ]);
+      setMessages((prev) => {
+        const updated = [...prev];
+        for (let i = updated.length - 1; i >= 0; i--) {
+          if (updated[i].role === 'user') {
+            updated[i] = { ...updated[i], correction: data.correction ?? null };
+            break;
+          }
+        }
+        return [
+          ...updated,
+          { role: 'assistant', content: data.reply, timestamp: new Date().toISOString(), correction: null },
+        ];
+      });
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     },
     onError: (err: any) => {

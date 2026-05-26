@@ -41,7 +41,7 @@ export default function Vocabulary() {
   const words: UserWord[] = wordsData?.words ?? [];
   const total = wordsData?.total ?? 0;
   const dueCount = Array.isArray(dueData) ? dueData.length : 0;
-  const masteredCount = words.filter((w) => w.status === 'MASTERED').length;
+  const masteredCount = words.filter((w) => w.userWord?.status === 'MASTERED').length;
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
@@ -114,7 +114,7 @@ export default function Vocabulary() {
           ) : (
             <View style={{ gap: 8, paddingBottom: 24 }}>
               {words.map((item) => {
-                const status = item.userWord?.status ?? item.status;
+                const status = item.userWord?.status ?? 'NEW';
                 const sc = STATUS_COLORS[status] ?? '#71717a';
                 return (
                   <View
