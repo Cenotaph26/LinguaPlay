@@ -42,7 +42,7 @@ router.post('/register', async (req: Request, res: Response) => {
       select: USER_SELECT,
     });
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET ?? 'dev_secret', {
-      expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
     });
     res.status(201).json({ token, user: userPayload(user) });
   } catch (err) {
@@ -67,7 +67,7 @@ router.post('/login', async (req: Request, res: Response) => {
       return;
     }
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET ?? 'dev_secret', {
-      expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
     });
     res.json({ token, user: userPayload(user) });
   } catch (err) {
