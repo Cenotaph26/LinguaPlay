@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
 import authRouter from './routes/auth';
 import profileRouter from './routes/profile';
+import placementRouter from './routes/placement';
+import vocabularyRouter from './routes/vocabulary';
 
 dotenv.config();
 
@@ -24,6 +26,8 @@ app.get('/health', (_req, res) => {
 
 app.use('/auth', authRouter);
 app.use('/profile', profileRouter);
+app.use('/placement', placementRouter);
+app.use('/vocabulary', vocabularyRouter);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
