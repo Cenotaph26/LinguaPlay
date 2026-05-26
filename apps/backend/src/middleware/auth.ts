@@ -1,12 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-export interface AuthRequest extends Request {
-  userId: string;
-  apiKey?: string;
+declare global {
+  namespace Express {
+    interface Request {
+      userId: string;
+      apiKey?: string;
+    }
+  }
 }
 
-export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
+export type AuthRequest = Request;
+
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Unauthorized' });

@@ -68,18 +68,12 @@ router.post('/review', async (req: AuthRequest, res: Response) => {
       res.status(404).json({ error: 'Kelime bulunamadı' });
       return;
     }
-    const { interval, easeFactor, repetitions } = srsService.updateSRS(
+    const { interval, easeFactor, repetitions, nextReview, status } = srsService.calculate(
       quality as 0 | 1 | 2 | 3,
       uw.interval,
       uw.easeFactor,
       uw.repetitions,
     );
-    const nextReview = new Date();
-    nextReview.setDate(nextReview.getDate() + interval);
-
-    let status: 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED' = 'LEARNING';
-    if (repetitions >= 5 && interval >= 14) status = 'MASTERED';
-    else if (repetitions >= 2) status = 'REVIEW';
 
     const updated = await prisma.userWord.update({
       where: { id: userWordId },

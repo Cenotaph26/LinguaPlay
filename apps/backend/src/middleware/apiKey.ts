@@ -1,9 +1,8 @@
-import { Response, NextFunction } from 'express';
-import { AuthRequest } from './auth';
+import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { decrypt } from '../services/encryption.service';
 
-export async function requireApiKey(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function requireApiKey(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },

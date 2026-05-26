@@ -85,12 +85,10 @@ router.post('/submit', async (req: AuthRequest, res: Response) => {
       const uw = await prisma.userWord.findFirst({ where: { userId: req.userId, wordId: q.wordId } });
       if (!uw) continue;
       const quality = result.correct ? 3 : 0;
-      const { interval, easeFactor, repetitions } = srsService.updateSRS(quality as 0 | 3, uw.interval, uw.easeFactor, uw.repetitions);
-      const nextReview = new Date();
-      nextReview.setDate(nextReview.getDate() + interval);
+      const { interval, easeFactor, repetitions, nextReview, status } = srsService.calculate(quality as 0 | 3, uw.interval, uw.easeFactor, uw.repetitions);
       await prisma.userWord.update({
         where: { id: uw.id },
-        data: { interval, easeFactor, repetitions, nextReview },
+        data: { interval, easeFactor, repetitions, nextReview, status },
       });
     }
 
