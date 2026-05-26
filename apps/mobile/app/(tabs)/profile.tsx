@@ -6,9 +6,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/authStore';
 import { profileApi } from '../../services/api';
 import i18n from '../../utils/i18n';
+
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export default function Profile() {
   const { user, setUser, logout } = useAuthStore();
@@ -21,6 +24,19 @@ export default function Profile() {
 
   const hasApiKey = user?.hasApiKey ?? false;
   const lang = user?.uiLanguage ?? 'tr';
+
+  const { data: stats } = useQuery({
+    queryKey: ['profile-stats'],
+    queryFn: () => profileApi.getStats().then((r) => r.data),
+    staleTime: 60000,
+  });
+
+  const STATS: Array<{ label: string; value: number | undefined; icon: IconName; color: string }> = [
+    { label: 'Kelime', value: stats?.wordCount, icon: 'book-outline', color: '#6366f1' },
+    { label: 'Ustalaşıldı', value: stats?.masteredCount, icon: 'checkmark-circle-outline', color: '#22c55e' },
+    { label: 'Seans', value: stats?.sessionCount, icon: 'chatbubbles-outline', color: '#8b5cf6' },
+    { label: 'İçerik', value: stats?.contentCount, icon: 'film-outline', color: '#f59e0b' },
+  ];
 
   async function handleSaveApiKey() {
     if (!apiKey.trim()) return;
@@ -88,23 +104,44 @@ export default function Profile() {
         </View>
 
         {/* User Card */}
-        <View className="bg-bg2 border border-border rounded-2xl p-4 mb-4 flex-row items-center" style={{ gap: 12 }}>
-          <View style={{ backgroundColor: '#6366f122', borderRadius: 9999, width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="person" size={26} color="#6366f1" />
-          </View>
-          <View className="flex-1">
-            <Text className="text-text1 font-semibold" numberOfLines={1}>{user?.email ?? '—'}</Text>
-            <View className="flex-row items-center mt-1" style={{ gap: 8 }}>
-              <Text className="text-text3 text-sm">
-                {user?.level === 'UNSET' ? 'Seviye belirlenmedi' : `Seviye: ${user?.level}`}
-              </Text>
-              {hasApiKey && (
-                <View style={{ backgroundColor: '#22c55e22', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                  <Text style={{ color: '#22c55e', fontSize: 10, fontWeight: '600' }}>API Aktif</Text>
-                </View>
-              )}
+        <View className="bg-bg2 border border-border rounded-2xl p-4 mb-4">
+          <View className="flex-row items-center" style={{ gap: 12 }}>
+            <View style={{ backgroundColor: '#6366f122', borderRadius: 9999, width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="person" size={26} color="#6366f1" />
             </View>
+            <View className="flex-1">
+              <Text className="text-text1 font-semibold" numberOfLines={1}>{user?.email ?? '—'}</Text>
+              <View className="flex-row items-center mt-1" style={{ gap: 8 }}>
+                <View style={{ backgroundColor: '#6366f122', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
+                  <Text style={{ color: '#818cf8', fontWeight: '600', fontSize: 12 }}>
+                    {user?.level === 'UNSET' ? 'Seviye belirlenmedi' : user?.level}
+                  </Text>
+                </View>
+                {hasApiKey && (
+                  <View style={{ backgroundColor: '#22c55e22', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                    <Text style={{ color: '#22c55e', fontSize: 10, fontWeight: '600' }}>API Aktif</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push('/placement')}
+              style={{ backgroundColor: '#27272a', borderRadius: 10, padding: 8 }}
+            >
+              <Ionicons name="school-outline" size={18} color="#a1a1aa" />
+            </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Stats Grid */}
+        <View className="flex-row mb-4" style={{ gap: 8 }}>
+          {STATS.map((s) => (
+            <View key={s.label} className="flex-1 bg-bg2 border border-border rounded-xl p-3 items-center">
+              <Ionicons name={s.icon} size={16} color={s.color} />
+              <Text className="text-text1 font-bold text-base mt-1">{s.value ?? 0}</Text>
+              <Text className="text-text3" style={{ fontSize: 10 }}>{s.label}</Text>
+            </View>
+          ))}
         </View>
 
         {/* API Key Card */}
