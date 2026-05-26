@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,15 +15,22 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   NEW: 'Yeni',
-  LEARNING: 'Ogreniliyor',
+  LEARNING: 'Öğreniliyor',
   REVIEW: 'Tekrar',
-  MASTERED: 'Ustalasildi',
+  MASTERED: 'Ustalaşıldı',
 };
 
+const FILTERS = ['Tümü', 'NEW', 'LEARNING', 'REVIEW', 'MASTERED'] as const;
+
 export default function Vocabulary() {
-  const { data: wordsData, isLoading: wordsLoading } = useQuery({
-    queryKey: ['vocabulary-words'],
-    queryFn: () => vocabularyApi.getWords().then((r) => r.data),
+  const [filter, setFilter] = useState<string>('Tümü');
+
+  const { data: wordsData, isLoading } = useQuery({
+    queryKey: ['vocabulary-words', filter],
+    queryFn: () =>
+      vocabularyApi
+        .getWords(filter === 'Tümü' ? {} : { status: filter })
+        .then((r) => r.data),
   });
 
   const { data: dueData } = useQuery({
@@ -30,24 +38,24 @@ export default function Vocabulary() {
     queryFn: () => vocabularyApi.getDue().then((r) => r.data),
   });
 
-  const items: UserWord[] = wordsData?.items ?? [];
+  const words: UserWord[] = wordsData?.words ?? [];
   const total = wordsData?.total ?? 0;
-  const dueCount = dueData?.count ?? 0;
-  const masteredCount = items.filter((w) => w.status === 'MASTERED').length;
+  const dueCount = Array.isArray(dueData) ? dueData.length : 0;
+  const masteredCount = words.filter((w) => w.status === 'MASTERED').length;
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
       <View className="flex-1 px-5">
         <View className="py-5">
           <Text className="text-2xl font-bold text-text1">Kelimelerim</Text>
-          <Text className="text-text3 text-sm mt-1">Kelime haznenizi gelistirin</Text>
+          <Text className="text-text3 text-sm mt-1">Kelime haznenizi geliştirin</Text>
         </View>
 
         <View className="flex-row mb-5" style={{ gap: 10 }}>
           {[
             { label: 'Toplam', value: String(total), color: '#6366f1' },
             { label: 'Bugün', value: String(dueCount), color: '#f59e0b' },
-            { label: 'Ustalasildi', value: String(masteredCount), color: '#22c55e' },
+            { label: 'Ustalaşıldı', value: String(masteredCount), color: '#22c55e' },
           ].map((stat) => (
             <View key={stat.label} className="flex-1 bg-bg2 border border-border rounded-xl p-3">
               <Text className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</Text>
@@ -58,19 +66,45 @@ export default function Vocabulary() {
 
         <TouchableOpacity
           onPress={() => router.push('/review')}
-          className="bg-accent rounded-xl py-3 flex-row items-center justify-center mb-5"
+          className="bg-accent rounded-xl py-3 flex-row items-center justify-center mb-4"
           style={{ gap: 8 }}
+          disabled={dueCount === 0}
         >
           <Ionicons name="refresh-outline" size={18} color="#fff" />
-          <Text className="text-white font-semibold">Tekrar Başlat ({dueCount})</Text>
+          <Text className="text-white font-semibold">
+            {dueCount > 0 ? `Tekrar Başlat (${dueCount})` : 'Bugün tekrar yok'}
+          </Text>
         </TouchableOpacity>
 
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 40, marginBottom: 12 }}>
+          <View className="flex-row" style={{ gap: 8 }}>
+            {FILTERS.map((f) => (
+              <TouchableOpacity
+                key={f}
+                onPress={() => setFilter(f)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 6,
+                  borderRadius: 20,
+                  backgroundColor: filter === f ? '#6366f1' : '#18181b',
+                  borderWidth: 1,
+                  borderColor: filter === f ? '#6366f1' : '#27272a',
+                }}
+              >
+                <Text style={{ color: filter === f ? '#fff' : '#71717a', fontSize: 12, fontWeight: '600' }}>
+                  {f === 'Tümü' ? 'Tümü' : STATUS_LABELS[f]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+
         <ScrollView showsVerticalScrollIndicator={false}>
-          {wordsLoading ? (
+          {isLoading ? (
             <View className="items-center py-8">
               <ActivityIndicator color="#6366f1" />
             </View>
-          ) : items.length === 0 ? (
+          ) : words.length === 0 ? (
             <View className="items-center justify-center py-16">
               <Ionicons name="book-outline" size={48} color="#3f3f46" />
               <Text className="text-text3 mt-4 text-center">
@@ -79,8 +113,9 @@ export default function Vocabulary() {
             </View>
           ) : (
             <View style={{ gap: 8, paddingBottom: 24 }}>
-              {items.map((item) => {
-                const sc = STATUS_COLORS[item.status] ?? '#71717a';
+              {words.map((item) => {
+                const status = item.userWord?.status ?? item.status;
+                const sc = STATUS_COLORS[status] ?? '#71717a';
                 return (
                   <View
                     key={item.id}
@@ -88,9 +123,9 @@ export default function Vocabulary() {
                     style={{ gap: 12 }}
                   >
                     <View className="flex-1">
-                      <Text className="text-text1 font-medium">{item.word.word}</Text>
+                      <Text className="text-text1 font-medium">{item.word}</Text>
                       <Text className="text-text3 text-sm" numberOfLines={1}>
-                        {item.word.definitionTr || item.word.definition}
+                        {item.definitionTr || item.definition}
                       </Text>
                     </View>
                     <View
@@ -102,7 +137,7 @@ export default function Vocabulary() {
                       }}
                     >
                       <Text style={{ color: sc, fontSize: 11, fontWeight: '600' }}>
-                        {STATUS_LABELS[item.status] ?? item.status}
+                        {STATUS_LABELS[status] ?? status}
                       </Text>
                     </View>
                   </View>
