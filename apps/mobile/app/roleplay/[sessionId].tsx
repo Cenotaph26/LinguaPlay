@@ -207,6 +207,7 @@ export default function RoleplayChat() {
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
           showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
         >
           {sessionLoading ? (
             <View style={{ alignItems: 'center', paddingTop: 40 }}>

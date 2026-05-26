@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { roleplayApi, RolePlayScene } from '../../services/api';
+import { useAuthStore } from '../../stores/authStore';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -27,8 +28,11 @@ const LEVEL_COLORS: Record<string, string> = {
 };
 
 export default function Roleplay() {
+  const { user } = useAuthStore();
   const [customModal, setCustomModal] = useState(false);
   const [customScene, setCustomScene] = useState('');
+
+  const levelUnset = !user?.level || user.level === 'UNSET';
 
   const { data: scenes = [], isLoading } = useQuery({
     queryKey: ['roleplay-scenes'],
@@ -68,8 +72,30 @@ export default function Roleplay() {
           <Text className="text-text3 text-sm mt-1">Gerçek senaryolarla pratik yap</Text>
         </View>
 
+        {levelUnset && (
+          <TouchableOpacity
+            onPress={() => router.push('/placement')}
+            style={{ backgroundColor: '#f59e0b22', borderColor: '#f59e0b', borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+          >
+            <Ionicons name="school-outline" size={20} color="#f59e0b" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#f59e0b', fontWeight: '600', fontSize: 14 }}>Seviye Belirlenmedi</Text>
+              <Text style={{ color: '#d97706', fontSize: 12, marginTop: 2 }}>Rol yapma için önce seviye testini tamamla →</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
-          onPress={() => setCustomModal(true)}
+          onPress={() => {
+            if (levelUnset) {
+              Alert.alert('Seviye Gerekli', 'Konuşma pratiği için önce seviye testini tamamlamalısın.', [
+                { text: 'Teste Git', onPress: () => router.push('/placement') },
+                { text: 'İptal' },
+              ]);
+              return;
+            }
+            setCustomModal(true);
+          }}
           className="bg-bg2 border border-border rounded-2xl p-4 flex-row items-center mb-5"
           style={{ gap: 12 }}
         >
@@ -118,7 +144,16 @@ export default function Roleplay() {
                   </View>
                   <Text className="text-text3 text-sm mt-2 mb-3">{scene.descriptionTr}</Text>
                   <TouchableOpacity
-                    onPress={() => startMutation.mutate({ sceneId: scene.id })}
+                    onPress={() => {
+                      if (levelUnset) {
+                        Alert.alert('Seviye Gerekli', 'Konuşma pratiği için önce seviye testini tamamlamalısın.', [
+                          { text: 'Teste Git', onPress: () => router.push('/placement') },
+                          { text: 'İptal' },
+                        ]);
+                        return;
+                      }
+                      startMutation.mutate({ sceneId: scene.id });
+                    }}
                     disabled={startMutation.isPending}
                     style={{
                       backgroundColor: '#6366f1',
