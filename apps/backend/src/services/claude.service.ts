@@ -1,168 +1,193 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-export interface WordExplanation {
-  word: string;
-  definition: string;
-  definitionTr: string;
-  examples: string[];
-  phonetic?: string;
-  level: string;
-}
-
-export interface ContentAnalysis {
-  title: string;
-  words: Array<{
-    word: string;
-    definition: string;
-    definitionTr: string;
-    examples: string[];
-    level: string;
-    occurrences: number;
-    contexts: string[];
-  }>;
-  phrases: Array<{
-    phrase: string;
-    meaning: string;
-    meaningTr: string;
-    examples: string[];
-  }>;
-}
-
-export interface QuizQuestion {
-  id: string;
-  word: string;
-  question: string;
-  options: string[];
-  correctIndex: number;
-}
+const SONNET = 'claude-sonnet-4-6';
+const HAIKU = 'claude-haiku-4-5-20251001';
 
 export class ClaudeService {
   private getClient(apiKey: string) {
     return new Anthropic({ apiKey });
   }
 
-  async explainWord(
-    apiKey: string,
-    word: string,
-    context: string,
-    level: string
-  ): Promise<WordExplanation> {
+  async chat(apiKey: string, messages: Anthropic.MessageParam[], system: string): Promise<Anthropic.Message> {
     const client = this.getClient(apiKey);
-    const resp = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
-      system:
-        'You are an English vocabulary teacher. Respond ONLY with valid JSON, no markdown fences.',
-      messages: [
-        {
-          role: 'user',
-          content: `Explain the word "${word}" for a ${level} English learner.${
-            context ? ` Context: "${context}"` : ''
-          }\n\nRespond with JSON: {"word":string,"definition":string,"definitionTr":string,"examples":string[],"phonetic":string,"level":string}`,
-        },
-      ],
-    });
-    const text = (resp.content[0] as { text: string }).text.trim();
-    return JSON.parse(text) as WordExplanation;
-  }
-
-  async roleplayChatStream(
-    apiKey: string,
-    systemPrompt: string,
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
-    onChunk: (chunk: string) => void
-  ): Promise<string> {
-    const client = this.getClient(apiKey);
-    let full = '';
-    const stream = await client.messages.stream({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 512,
-      system: systemPrompt,
+    return client.messages.create({
+      model: SONNET,
+      max_tokens: 1024,
+      system,
       messages,
     });
-    for await (const event of stream) {
-      if (
-        event.type === 'content_block_delta' &&
-        event.delta.type === 'text_delta'
-      ) {
-        full += event.delta.text;
-        onChunk(event.delta.text);
-      }
-    }
-    return full;
   }
 
-  async roleplayFeedback(
-    apiKey: string,
-    messages: Array<{ role: string; content: string }>,
-    sceneName: string
-  ): Promise<string> {
+  chatStream(apiKey: string, messages: Anthropic.MessageParam[], system: string) {
     const client = this.getClient(apiKey);
-    const transcript = messages
-      .map((m) => `${m.role === 'user' ? 'Student' : 'AI'}: ${m.content}`)
-      .join('\n');
-    const resp = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    return client.messages.stream({
+      model: SONNET,
       max_tokens: 1024,
-      system:
-        'You are an English teacher giving feedback on a roleplay conversation. Be encouraging, specific and constructive. Write in Turkish.',
-      messages: [
-        {
-          role: 'user',
-          content: `Scene: ${sceneName}\n\nConversation:\n${transcript}\n\nProvide detailed feedback on: grammar, vocabulary, naturalness, and suggestions for improvement.`,
-        },
-      ],
+      system,
+      messages,
     });
-    return (resp.content[0] as { text: string }).text.trim();
   }
 
-  async analyzeContent(
-    apiKey: string,
-    text: string,
-    level: string
-  ): Promise<ContentAnalysis> {
+  async analyzeContent(apiKey: string, text: string, level: string): Promise<{
+    vocabulary: { word: string; definition: string; definitionTr: string; level: string; context: string }[];
+    phrases: { phrase: string; meaning: string; meaningTr: string; example: string }[];
+    grammarNotes: string[];
+  }> {
     const client = this.getClient(apiKey);
-    const excerpt = text.slice(0, 6000);
     const resp = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: SONNET,
       max_tokens: 4096,
-      system:
-        'You are an English content analyzer for language learners. Respond ONLY with valid JSON, no markdown fences.',
-      messages: [
-        {
-          role: 'user',
-          content: `Analyze this English content for a ${level} learner. Extract a title (infer from content), important vocabulary words with definitions (in English and Turkish), and useful phrases.\n\nContent:\n${excerpt}\n\nRespond with JSON:\n{"title":string,"words":[{"word":string,"definition":string,"definitionTr":string,"examples":string[],"level":string,"occurrences":number,"contexts":string[]}],"phrases":[{"phrase":string,"meaning":string,"meaningTr":string,"examples":string[]}]}\n\nInclude 10-20 words and 5-10 phrases. Only include words that would genuinely help a ${level} learner.`,
-        },
-      ],
+      system: 'You are an English language analysis tool. Return ONLY valid JSON, no other text.',
+      messages: [{
+        role: 'user',
+        content: `Analyze this English text for a ${level} CEFR learner (native language: Turkish).
+Text: ${text.slice(0, 3000)}
+
+Return JSON only:
+{
+  "vocabulary": [{"word": "...", "definition": "...", "definitionTr": "...", "level": "B1", "context": "..."}],
+  "phrases": [{"phrase": "...", "meaning": "...", "meaningTr": "...", "example": "..."}],
+  "grammarNotes": ["..."]
+}
+Pick only words at or slightly above ${level} level. Maximum 20 vocabulary items, 10 phrases.`,
+      }],
     });
-    const txt = (resp.content[0] as { text: string }).text.trim();
-    return JSON.parse(txt) as ContentAnalysis;
+    const raw = resp.content[0].type === 'text' ? resp.content[0].text : '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Invalid JSON from Claude');
+    return JSON.parse(match[0]);
+  }
+
+  async evaluatePlacement(
+    apiKey: string,
+    answers: { questionId: number; answer: string }[],
+    questions: { id: number; question: string; correctAnswer: string; level: string }[]
+  ): Promise<{ level: string; explanation: string; score: number }> {
+    const client = this.getClient(apiKey);
+    const summary = questions.map(q => {
+      const a = answers.find(x => x.questionId === q.id);
+      return `Q${q.id} [${q.level}]: ${q.question} | Correct: ${q.correctAnswer} | User: ${a?.answer ?? '(no answer)'}`;
+    }).join('\n');
+    const resp = await client.messages.create({
+      model: HAIKU,
+      max_tokens: 512,
+      system: 'You are an English level evaluator. Return ONLY valid JSON.',
+      messages: [{
+        role: 'user',
+        content: `Evaluate this placement test for a Turkish English learner.
+${summary}
+
+Return JSON only:
+{"level": "B1", "explanation": "Short explanation in Turkish", "score": 14}
+level must be one of: A1, A2, B1, B2, C1, C2
+score is number of correct answers out of ${questions.length}`,
+      }],
+    });
+    const raw = resp.content[0].type === 'text' ? resp.content[0].text : '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Invalid JSON from Claude');
+    return JSON.parse(match[0]);
+  }
+
+  async explainWord(apiKey: string, word: string, context: string, level: string): Promise<{
+    definition: string;
+    definitionTr: string;
+    phonetic: string;
+    examples: string[];
+    synonyms: string[];
+  }> {
+    const client = this.getClient(apiKey);
+    const resp = await client.messages.create({
+      model: HAIKU,
+      max_tokens: 512,
+      system: 'You are an English dictionary. Return ONLY valid JSON.',
+      messages: [{
+        role: 'user',
+        content: `Explain the word "${word}" for a ${level} Turkish learner.
+Context: "${context}"
+
+Return JSON only:
+{"definition": "...", "definitionTr": "Türkçe tanım", "phonetic": "/wɜːrd/", "examples": ["...", "...", "..."], "synonyms": ["...", "..."]}`,
+      }],
+    });
+    const raw = resp.content[0].type === 'text' ? resp.content[0].text : '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Invalid JSON');
+    return JSON.parse(match[0]);
   }
 
   async generateQuiz(
     apiKey: string,
-    words: Array<{ word: string; definition: string; level: string }>,
-    count: number
-  ): Promise<QuizQuestion[]> {
+    words: { word: string; definition: string; level: string }[],
+    level: string,
+    count = 10
+  ): Promise<{
+    questions: {
+      id: number;
+      type: 'multiple_choice' | 'fill_blank' | 'translation';
+      question: string;
+      options?: string[];
+      correctAnswer: string;
+    }[];
+  }> {
     const client = this.getClient(apiKey);
-    const wordList = words
-      .slice(0, count)
-      .map((w) => `${w.word}: ${w.definition}`)
+    const wordList = words.slice(0, 20).map(w => `${w.word}: ${w.definition}`).join('\n');
+    const resp = await client.messages.create({
+      model: HAIKU,
+      max_tokens: 2048,
+      system: 'You are a quiz generator. Return ONLY valid JSON.',
+      messages: [{
+        role: 'user',
+        content: `Generate ${count} quiz questions for a ${level} English learner (Turkish native) from these words:
+${wordList}
+
+Return JSON only:
+{"questions": [
+  {"id": 1, "type": "multiple_choice", "question": "What does X mean?", "options": ["a","b","c","d"], "correctAnswer": "a"},
+  {"id": 2, "type": "fill_blank", "question": "She ___ to the store.", "correctAnswer": "went"},
+  {"id": 3, "type": "translation", "question": "Translate: ...", "correctAnswer": "..."}
+]}
+Mix the three types evenly.`,
+      }],
+    });
+    const raw = resp.content[0].type === 'text' ? resp.content[0].text : '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Invalid JSON');
+    return JSON.parse(match[0]);
+  }
+
+  async sessionFeedback(
+    apiKey: string,
+    transcript: { role: string; content: string }[],
+    level: string
+  ): Promise<{
+    fluencyScore: number;
+    grammarMistakes: string[];
+    newVocabulary: string[];
+    suggestions: string;
+  }> {
+    const client = this.getClient(apiKey);
+    const text = transcript
+      .filter(m => m.role === 'user')
+      .map(m => m.content)
       .join('\n');
     const resp = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
-      system:
-        'You are an English quiz generator. Respond ONLY with valid JSON, no markdown fences.',
-      messages: [
-        {
-          role: 'user',
-          content: `Generate ${count} multiple-choice quiz questions for these English words:\n${wordList}\n\nEach question tests understanding of the word meaning. Provide 4 options, with one correct answer.\n\nRespond with JSON array: [{"id":string,"word":string,"question":string,"options":string[4],"correctIndex":number}]`,
-        },
-      ],
+      model: HAIKU,
+      max_tokens: 1024,
+      system: 'You are an English teacher giving feedback. Return ONLY valid JSON.',
+      messages: [{
+        role: 'user',
+        content: `Review this ${level} learner's English from a role-play session:
+${text.slice(0, 2000)}
+
+Return JSON only:
+{"fluencyScore": 7, "grammarMistakes": ["...", "..."], "newVocabulary": ["word1", "word2"], "suggestions": "Short suggestion in Turkish"}`,
+      }],
     });
-    const txt = (resp.content[0] as { text: string }).text.trim();
-    return JSON.parse(txt) as QuizQuestion[];
+    const raw = resp.content[0].type === 'text' ? resp.content[0].text : '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Invalid JSON');
+    return JSON.parse(match[0]);
   }
 }
 

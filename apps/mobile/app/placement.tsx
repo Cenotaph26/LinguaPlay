@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
-import { placementApi, PlacementQuestion } from '../services/api';
+import { placementApi } from '../services/api';
 import { useQuery, useMutation } from '@tanstack/react-query';
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -15,10 +15,10 @@ const LEVEL_COLORS: Record<string, string> = {
 export default function Placement() {
   const { setUser, user } = useAuthStore();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Array<{ id: string; selectedIndex: number }>>([]);
+  const [answers, setAnswers] = useState<Array<{ questionId: number; answer: string }>>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
-  const [result, setResult] = useState<{ score: number; total: number; level: string } | null>(null);
+  const [result, setResult] = useState<{ score: number; level: string; explanation: string } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['placement-test'],
@@ -26,24 +26,24 @@ export default function Placement() {
   });
 
   const evaluateMutation = useMutation({
-    mutationFn: (ans: Array<{ id: string; selectedIndex: number }>) =>
+    mutationFn: (ans: Array<{ questionId: number; answer: string }>) =>
       placementApi.evaluate(ans).then((r) => r.data),
     onSuccess: (data) => {
       setResult(data);
       setFinished(true);
       if (user) setUser({ ...user, level: data.level });
     },
-    onError: () => Alert.alert('Hata', 'Sonuç hesaplanamadı.'),
+    onError: () => Alert.alert('Hata', 'Sonuç hesaplanamadı. API anahtarınızı kontrol edin.'),
   });
 
-  const questions: PlacementQuestion[] = data?.questions ?? [];
+  const questions = data?.questions ?? [];
   const current = questions[currentIndex];
-  const progress = questions.length > 0 ? (currentIndex / questions.length) : 0;
+  const progress = questions.length > 0 ? currentIndex / questions.length : 0;
 
   function handleSelect(index: number) {
     if (selectedIndex !== null) return;
     setSelectedIndex(index);
-    const newAnswers = [...answers, { id: current.id, selectedIndex: index }];
+    const newAnswers = [...answers, { questionId: Number(current.id), answer: current.options[index] }];
     setAnswers(newAnswers);
     setTimeout(() => {
       setSelectedIndex(null);
@@ -83,12 +83,7 @@ export default function Placement() {
             <Text style={{ color: lc, fontSize: 48, fontWeight: '800' }}>{result.level}</Text>
           </View>
           <Text className="text-text1 text-2xl font-bold mb-2">Seviyeniz Belirlendi</Text>
-          <Text className="text-text3 text-center mb-2">
-            {result.score} / {result.total} soru doğru
-          </Text>
-          <Text className="text-text3 text-center mb-8">
-            CEFR seviyeniz: <Text style={{ color: lc, fontWeight: '700' }}>{result.level}</Text>
-          </Text>
+          <Text className="text-text3 text-center mb-4">{result.explanation}</Text>
           <TouchableOpacity
             onPress={() => router.replace('/(tabs)')}
             className="bg-accent rounded-xl py-4 px-8"
@@ -104,7 +99,7 @@ export default function Placement() {
     return (
       <SafeAreaView className="flex-1 bg-bg items-center justify-center">
         <ActivityIndicator color="#6366f1" size="large" />
-        <Text className="text-text3 mt-4">Sonuc hesaplanıyor...</Text>
+        <Text className="text-text3 mt-4">Sonuç hesaplanıyor...</Text>
       </SafeAreaView>
     );
   }
@@ -139,7 +134,7 @@ export default function Placement() {
       <View className="flex-1 px-5 justify-center">
         <View
           style={{
-            backgroundColor: LEVEL_COLORS[current.level] + '22',
+            backgroundColor: (LEVEL_COLORS[current.level] ?? '#71717a') + '22',
             alignSelf: 'flex-start',
             paddingHorizontal: 10,
             paddingVertical: 4,
@@ -147,7 +142,7 @@ export default function Placement() {
             marginBottom: 16,
           }}
         >
-          <Text style={{ color: LEVEL_COLORS[current.level], fontSize: 12, fontWeight: '600' }}>
+          <Text style={{ color: LEVEL_COLORS[current.level] ?? '#71717a', fontSize: 12, fontWeight: '600' }}>
             {current.level}
           </Text>
         </View>
@@ -158,29 +153,21 @@ export default function Placement() {
 
         <View style={{ gap: 12 }}>
           {current.options.map((option, idx) => {
-            let bg = '#18181b';
-            let border = '#27272a';
-            let textColor = '#fafafa';
-            if (selectedIndex !== null) {
-              if (idx === selectedIndex) {
-                bg = '#6366f133';
-                border = '#6366f1';
-              }
-            }
+            const isSelected = selectedIndex === idx;
             return (
               <TouchableOpacity
                 key={idx}
                 onPress={() => handleSelect(idx)}
                 disabled={selectedIndex !== null}
                 style={{
-                  backgroundColor: bg,
-                  borderColor: border,
+                  backgroundColor: isSelected ? '#6366f133' : '#18181b',
+                  borderColor: isSelected ? '#6366f1' : '#27272a',
                   borderWidth: 1,
                   borderRadius: 14,
                   padding: 16,
                 }}
               >
-                <Text style={{ color: textColor, fontSize: 15 }}>{option}</Text>
+                <Text style={{ color: '#fafafa', fontSize: 15 }}>{option}</Text>
               </TouchableOpacity>
             );
           })}

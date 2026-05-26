@@ -5,7 +5,7 @@ const ALGORITHM = 'aes-256-gcm';
 function getKey(): Buffer {
   const secret = process.env.API_KEY_ENCRYPTION_SECRET ?? '';
   if (secret.length === 64) return Buffer.from(secret, 'hex');
-  console.warn('[encryption] API_KEY_ENCRYPTION_SECRET not configured — using insecure dev key');
+  console.warn('[encryption] API_KEY_ENCRYPTION_SECRET not set — using insecure dev key');
   return Buffer.alloc(32, 0x2a);
 }
 

@@ -7,6 +7,9 @@ import authRouter from './routes/auth';
 import profileRouter from './routes/profile';
 import placementRouter from './routes/placement';
 import vocabularyRouter from './routes/vocabulary';
+import roleplayRouter from './routes/roleplay';
+import contentRouter from './routes/content';
+import quizRouter from './routes/quiz';
 
 dotenv.config();
 
@@ -15,21 +18,20 @@ const PORT = process.env.PORT || 3000;
 
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
-app.get('/', (_req, res) => {
-  res.json({ name: 'LinguaPlay API', version: '1.0.0', status: 'ok' });
-});
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+app.get('/', (_req, res) => res.json({ name: 'LinguaPlay API', version: '1.0.0', status: 'ok' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 app.use('/auth', authRouter);
 app.use('/profile', profileRouter);
 app.use('/placement', placementRouter);
 app.use('/vocabulary', vocabularyRouter);
+app.use('/roleplay', roleplayRouter);
+app.use('/content', contentRouter);
+app.use('/quiz', quizRouter);
 
-app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });

@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { vocabularyApi, UserWord } from '../services/api';
+import { vocabularyApi } from '../services/api';
 
 const QUALITY_BUTTONS: Array<{ label: string; quality: 0 | 1 | 2 | 3; color: string }> = [
   { label: 'Tekrar', quality: 0, color: '#ef4444' },
   { label: 'Zor', quality: 1, color: '#f59e0b' },
-  { label: 'Iyi', quality: 2, color: '#6366f1' },
+  { label: 'İyi', quality: 2, color: '#6366f1' },
   { label: 'Kolay', quality: 3, color: '#22c55e' },
 ];
 
@@ -25,20 +25,23 @@ export default function Review() {
   });
 
   const reviewMutation = useMutation({
-    mutationFn: ({ wordId, quality }: { wordId: string; quality: 0 | 1 | 2 | 3 }) =>
-      vocabularyApi.review(wordId, quality),
+    mutationFn: ({ userWordId, quality }: { userWordId: string; quality: 0 | 1 | 2 | 3 }) =>
+      vocabularyApi.review(userWordId, quality),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vocabulary-words'] });
+      queryClient.invalidateQueries({ queryKey: ['vocabulary-due'] });
     },
   });
 
-  const items: UserWord[] = data?.items ?? [];
+  const items = Array.isArray(data) ? data : [];
   const current = items[cardIndex];
   const progress = items.length > 0 ? reviewedCount / items.length : 0;
 
   async function handleRate(quality: 0 | 1 | 2 | 3) {
     if (!current) return;
-    await reviewMutation.mutateAsync({ wordId: current.wordId, quality });
+    const userWordId = current.userWord?.id;
+    if (!userWordId) return;
+    await reviewMutation.mutateAsync({ userWordId, quality });
     const next = cardIndex + 1;
     setReviewedCount(reviewedCount + 1);
     if (next >= items.length) {
@@ -71,7 +74,7 @@ export default function Review() {
             marginBottom: 24,
           }}
         >
-          <Text style={{ fontSize: 40 }}>+</Text>
+          <Text style={{ fontSize: 40 }}>✓</Text>
         </View>
         <Text className="text-text1 text-2xl font-bold mb-2">Tamamlandı!</Text>
         {items.length === 0 ? (
@@ -85,7 +88,7 @@ export default function Review() {
           onPress={() => router.replace('/(tabs)/vocabulary')}
           className="bg-accent rounded-xl py-4 px-8"
         >
-          <Text className="text-white font-semibold text-base">Kelimelerime Don</Text>
+          <Text className="text-white font-semibold text-base">Kelimelerime Dön</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -120,25 +123,21 @@ export default function Review() {
           className="bg-bg2 border border-border rounded-2xl p-6 mb-6"
           style={{ minHeight: 200, justifyContent: 'center', alignItems: 'center' }}
         >
-          <Text className="text-text1 text-3xl font-bold mb-2">{current.word.word}</Text>
-          {current.word.phonetic ? (
-            <Text className="text-text3 text-base mb-4">{current.word.phonetic}</Text>
+          <Text className="text-text1 text-3xl font-bold mb-2">
+            {current.word}
+          </Text>
+          {current.phonetic ? (
+            <Text className="text-text3 text-base mb-4">{current.phonetic}</Text>
           ) : null}
 
           {!revealed ? (
-            <Text className="text-text3 text-sm mt-4">Dokunarak cevabı goster</Text>
+            <Text className="text-text3 text-sm mt-4">Dokunarak cevabı göster</Text>
           ) : (
             <View className="mt-4 w-full">
-              <View
-                style={{
-                  height: 1,
-                  backgroundColor: '#27272a',
-                  marginBottom: 16,
-                }}
-              />
-              <Text className="text-text2 text-base mb-2">{current.word.definition}</Text>
-              <Text className="text-text3 text-sm mb-3">{current.word.definitionTr}</Text>
-              {current.word.examples.slice(0, 1).map((ex, i) => (
+              <View style={{ height: 1, backgroundColor: '#27272a', marginBottom: 16 }} />
+              <Text className="text-text2 text-base mb-2">{current.definition}</Text>
+              <Text className="text-text3 text-sm mb-3">{current.definitionTr}</Text>
+              {(current.examples ?? []).slice(0, 1).map((ex: string, i: number) => (
                 <Text key={i} className="text-text3 text-sm italic">"{ex}"</Text>
               ))}
             </View>
