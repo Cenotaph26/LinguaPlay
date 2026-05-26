@@ -16,11 +16,7 @@ interface Message {
   correction?: { original: string; suggestion: string; explanation: string } | null;
 }
 
-interface CorrectionBadgeProps {
-  correction: { original: string; suggestion: string; explanation: string };
-}
-
-function CorrectionBadge({ correction }: CorrectionBadgeProps) {
+function CorrectionBadge({ correction }: { correction: { original: string; suggestion: string; explanation: string } }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <TouchableOpacity
@@ -63,14 +59,17 @@ export default function RoleplayChat() {
   const scrollRef = useRef<ScrollView>(null);
   const queryClient = useQueryClient();
 
-  const { isLoading: sessionLoading } = useQuery({
+  const { data: sessionData, isLoading: sessionLoading } = useQuery({
     queryKey: ['roleplay-session', sessionId],
     queryFn: () => roleplayApi.getSession(sessionId).then((r) => r.data),
     enabled: !!sessionId,
-    onSuccess: (data) => {
-      setMessages(data.messages as Message[]);
-    },
   });
+
+  useEffect(() => {
+    if (sessionData?.messages) {
+      setMessages(sessionData.messages as Message[]);
+    }
+  }, [sessionData]);
 
   const sendMutation = useMutation({
     mutationFn: (content: string) =>
@@ -78,14 +77,9 @@ export default function RoleplayChat() {
     onSuccess: (data) => {
       setMessages((prev) => [
         ...prev,
-        {
-          role: 'assistant',
-          content: data.reply,
-          timestamp: new Date().toISOString(),
-          correction: null,
-        },
+        { role: 'assistant', content: data.reply, timestamp: new Date().toISOString(), correction: null },
       ]);
-      scrollRef.current?.scrollToEnd({ animated: true });
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     },
     onError: (err: any) => {
       Alert.alert('Hata', err.response?.data?.error ?? 'Mesaj gönderilemedi');
@@ -134,7 +128,6 @@ export default function RoleplayChat() {
               <Text style={{ color: '#a1a1aa', fontSize: 14 }}>Akıcılık Puanı</Text>
               <Text style={{ color: '#6366f1', fontSize: 28, fontWeight: 'bold' }}>{feedback.fluencyScore}/10</Text>
             </View>
-
             {feedback.grammarMistakes.length > 0 && (
               <View style={{ marginBottom: 12 }}>
                 <Text style={{ color: '#fafafa', fontWeight: '600', marginBottom: 8 }}>Dilbilgisi Düzeltmeleri</Text>
@@ -143,7 +136,6 @@ export default function RoleplayChat() {
                 ))}
               </View>
             )}
-
             {feedback.newVocabulary.length > 0 && (
               <View style={{ marginBottom: 12 }}>
                 <Text style={{ color: '#fafafa', fontWeight: '600', marginBottom: 8 }}>Yeni Kelimeler</Text>
@@ -156,7 +148,6 @@ export default function RoleplayChat() {
                 </View>
               </View>
             )}
-
             {feedback.suggestions && (
               <View>
                 <Text style={{ color: '#fafafa', fontWeight: '600', marginBottom: 6 }}>Öneri</Text>
@@ -197,7 +188,7 @@ export default function RoleplayChat() {
           >
             {endMutation.isPending
               ? <ActivityIndicator size="small" color="#6366f1" />
-              : <Text style={{ color: '#6366f1', fontWeight: '600' }}>Bitir</Text>
+              : <Text style={{ color: messages.length >= 2 ? '#6366f1' : '#3f3f46', fontWeight: '600' }}>Bitir</Text>
             }
           </TouchableOpacity>
         </View>
@@ -205,7 +196,7 @@ export default function RoleplayChat() {
         <ScrollView
           ref={scrollRef}
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, gap: 12 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
           showsVerticalScrollIndicator={false}
         >
           {sessionLoading ? (
@@ -214,7 +205,7 @@ export default function RoleplayChat() {
             </View>
           ) : (
             messages.map((msg, index) => (
-              <View key={index} style={{ alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 4 }}>
+              <View key={index} style={{ alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
                 <View
                   style={{
                     maxWidth: '80%',
@@ -236,7 +227,7 @@ export default function RoleplayChat() {
             ))
           )}
           {sendMutation.isPending && (
-            <View style={{ alignItems: 'flex-start', paddingLeft: 4 }}>
+            <View style={{ alignItems: 'flex-start', paddingLeft: 4, marginBottom: 8 }}>
               <View style={{ backgroundColor: '#18181b', borderRadius: 16, padding: 12 }}>
                 <ActivityIndicator size="small" color="#6366f1" />
               </View>
@@ -261,7 +252,6 @@ export default function RoleplayChat() {
               fontSize: 15,
               maxHeight: 120,
             }}
-            onSubmitEditing={handleSend}
           />
           <TouchableOpacity
             onPress={handleSend}
