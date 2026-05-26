@@ -3,6 +3,14 @@ import { secureStorage } from '../utils/secureStorage';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://linguaplay-production-94c0.up.railway.app';
 
+export interface UserData {
+  id: string;
+  email: string;
+  level: string;
+  uiLanguage: string;
+  hasApiKey: boolean;
+}
+
 export const api = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
@@ -17,38 +25,37 @@ api.interceptors.request.use(async (config) => {
 
 export const authApi = {
   register: (email: string, password: string) =>
-    api.post<{ token: string; user: { id: string; email: string; level: string; uiLanguage: string } }>(
-      '/auth/register', { email, password }
-    ),
+    api.post<{ token: string; user: UserData }>('/auth/register', { email, password }),
   login: (email: string, password: string) =>
-    api.post<{ token: string; user: { id: string; email: string; level: string; uiLanguage: string } }>(
-      '/auth/login', { email, password }
-    ),
-  me: () =>
-    api.get<{ id: string; email: string; level: string; uiLanguage: string }>('/auth/me'),
+    api.post<{ token: string; user: UserData }>('/auth/login', { email, password }),
+  me: () => api.get<UserData>('/auth/me'),
+};
+
+export const profileApi = {
+  setApiKey: (apiKey: string) => api.put('/profile/apikey', { apiKey }),
+  deleteApiKey: () => api.delete('/profile/apikey'),
+  updateSettings: (data: { uiLanguage?: string; level?: string }) =>
+    api.put<UserData>('/profile/settings', data),
+  getStats: () =>
+    api.get<{ wordCount: number; sessionCount: number; contentCount: number; masteredCount: number }>('/profile/stats'),
 };
 
 export const vocabularyApi = {
-  getWords: (params?: { status?: string; page?: number }) =>
-    api.get('/vocabulary/words', { params }),
+  getWords: (params?: { status?: string; page?: number }) => api.get('/vocabulary/words', { params }),
   getDue: () => api.get('/vocabulary/due'),
-  review: (wordId: string, quality: 0 | 1 | 2 | 3) =>
-    api.post('/vocabulary/review', { wordId, quality }),
+  review: (wordId: string, quality: 0 | 1 | 2 | 3) => api.post('/vocabulary/review', { wordId, quality }),
 };
 
 export const roleplayApi = {
   getScenes: () => api.get('/roleplay/scenes'),
-  startSession: (data: { sceneId?: string; customScene?: string }) =>
-    api.post('/roleplay/sessions', data),
+  startSession: (data: { sceneId?: string; customScene?: string }) => api.post('/roleplay/sessions', data),
   sendMessage: (sessionId: string, content: string) =>
     api.post(`/roleplay/sessions/${sessionId}/message`, { content }),
-  endSession: (sessionId: string) =>
-    api.post(`/roleplay/sessions/${sessionId}/end`),
+  endSession: (sessionId: string) => api.post(`/roleplay/sessions/${sessionId}/end`),
 };
 
 export const contentApi = {
-  addContent: (data: { type: string; url?: string }) =>
-    api.post('/content', data),
+  addContent: (data: { type: string; url?: string }) => api.post('/content', data),
   getContent: () => api.get('/content'),
   getContentById: (id: string) => api.get(`/content/${id}`),
   getStatus: (id: string) => api.get(`/content/${id}/status`),

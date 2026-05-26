@@ -3,15 +3,27 @@ import { View, ActivityIndicator } from 'react-native';
 import { Redirect } from 'expo-router';
 import { secureStorage } from '../utils/secureStorage';
 import { useAuthStore } from '../stores/authStore';
+import { authApi } from '../services/api';
+import i18n from '../utils/i18n';
 
 export default function Index() {
-  const { token, setToken } = useAuthStore();
+  const { token, setToken, setUser } = useAuthStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    secureStorage.getItem('auth_token')
-      .then((t) => { if (t) setToken(t); })
-      .finally(() => setLoading(false));
+    secureStorage.getItem('auth_token').then(async (t) => {
+      if (t) {
+        setToken(t);
+        try {
+          const { data } = await authApi.me();
+          setUser(data);
+          i18n.changeLanguage(data.uiLanguage ?? 'tr');
+        } catch {
+          await secureStorage.deleteItem('auth_token');
+          setToken(null);
+        }
+      }
+    }).finally(() => setLoading(false));
   }, []);
 
   if (loading) {
