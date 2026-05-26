@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { prisma } from './lib/prisma';
 import authRouter from './routes/auth';
+import profileRouter from './routes/profile';
 
 dotenv.config();
 
@@ -14,7 +15,6 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-// Health
 app.get('/', (_req, res) => {
   res.json({ name: 'LinguaPlay API', version: '1.0.0', status: 'ok' });
 });
@@ -22,10 +22,9 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Routes
 app.use('/auth', authRouter);
+app.use('/profile', profileRouter);
 
-// Error handler
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
