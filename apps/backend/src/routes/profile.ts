@@ -37,20 +37,22 @@ router.put('/settings', async (req: AuthRequest, res: Response) => {
     const { uiLanguage, level } = req.body as { uiLanguage?: string; level?: string };
     const data: Record<string, string> = {};
     if (uiLanguage && ['tr', 'en'].includes(uiLanguage)) data.uiLanguage = uiLanguage;
-    if (level && ['UNSET', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(level)) data.level = level;
-    if (Object.keys(data).length === 0) {
-      res.status(400).json({ error: 'Güncellenecek alan yok' });
-      return;
-    }
+    if (level && ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'UNSET'].includes(level)) data.level = level;
     const user = await prisma.user.update({
       where: { id: req.userId },
       data,
       select: { id: true, email: true, level: true, uiLanguage: true, apiKeyEnc: true },
     });
-    res.json({ id: user.id, email: user.email, level: user.level, uiLanguage: user.uiLanguage, hasApiKey: !!user.apiKeyEnc });
+    res.json({
+      id: user.id,
+      email: user.email,
+      level: user.level,
+      uiLanguage: user.uiLanguage,
+      hasApiKey: !!user.apiKeyEnc,
+    });
   } catch (err) {
     console.error('[profile/settings]', err);
-    res.status(500).json({ error: 'Ayarlar güncellenemedi' });
+    res.status(500).json({ error: 'Ayarlar kaydedilemedi' });
   }
 });
 

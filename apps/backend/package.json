@@ -15,7 +15,7 @@
     "@prisma/client": "^5.8.0",
     "jsonwebtoken": "^9.0.2",
     "bcryptjs": "^2.4.3",
-    "@anthropic-ai/sdk": "^0.16.0",
+    "@anthropic-ai/sdk": "^0.36.0",
     "youtube-transcript": "^1.0.6",
     "pdf-parse": "^1.1.1",
     "axios": "^1.6.5",

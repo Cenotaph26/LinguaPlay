@@ -1,176 +1,70 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireApiKey } from '../middleware/apiKey';
+import { claudeService } from '../services/claude.service';
 
 const router = Router();
+router.use(requireAuth);
 
 const PLACEMENT_QUESTIONS = [
-  {
-    id: '1', level: 'A1',
-    question: 'What ___ your name?',
-    options: ['is', 'are', 'am', 'be'],
-    correctIndex: 0,
-  },
-  {
-    id: '2', level: 'A1',
-    question: 'I ___ a student.',
-    options: ['is', 'are', 'am', 'be'],
-    correctIndex: 2,
-  },
-  {
-    id: '3', level: 'A1',
-    question: 'She ___ to school every day.',
-    options: ['go', 'goes', 'going', 'gone'],
-    correctIndex: 1,
-  },
-  {
-    id: '4', level: 'A2',
-    question: 'I ___ TV when you called.',
-    options: ['watch', 'watched', 'was watching', 'have watched'],
-    correctIndex: 2,
-  },
-  {
-    id: '5', level: 'A2',
-    question: 'They have lived here ___ 2010.',
-    options: ['for', 'since', 'ago', 'from'],
-    correctIndex: 1,
-  },
-  {
-    id: '6', level: 'A2',
-    question: 'This is the most ___ film I have ever seen.',
-    options: ['good', 'better', 'best', 'well'],
-    correctIndex: 2,
-  },
-  {
-    id: '7', level: 'B1',
-    question: 'If I ___ rich, I would travel the world.',
-    options: ['am', 'was', 'were', 'be'],
-    correctIndex: 2,
-  },
-  {
-    id: '8', level: 'B1',
-    question: 'The report ___ by the manager yesterday.',
-    options: ['wrote', 'was written', 'is written', 'has written'],
-    correctIndex: 1,
-  },
-  {
-    id: '9', level: 'B1',
-    question: 'Despite ___ hard, he failed the exam.',
-    options: ['study', 'studied', 'studying', 'to study'],
-    correctIndex: 2,
-  },
-  {
-    id: '10', level: 'B1',
-    question: 'She suggested ___ to the theatre.',
-    options: ['go', 'to go', 'going', 'gone'],
-    correctIndex: 2,
-  },
-  {
-    id: '11', level: 'B2',
-    question: 'By the time she arrived, I ___ waiting for two hours.',
-    options: ['was', 'had been', 'have been', 'am'],
-    correctIndex: 1,
-  },
-  {
-    id: '12', level: 'B2',
-    question: 'The word "ubiquitous" means:',
-    options: ['rare', 'present everywhere', 'dangerous', 'old-fashioned'],
-    correctIndex: 1,
-  },
-  {
-    id: '13', level: 'B2',
-    question: 'She is known for her ___ attention to detail.',
-    options: ['meticulous', 'careless', 'rapid', 'ordinary'],
-    correctIndex: 0,
-  },
-  {
-    id: '14', level: 'B2',
-    question: 'Had he studied harder, he ___ passed.',
-    options: ['would have', 'will have', 'would', 'had'],
-    correctIndex: 0,
-  },
-  {
-    id: '15', level: 'C1',
-    question: 'The politician was accused of ___ the public.',
-    options: ['misleading', 'misled', 'mislead', 'misleads'],
-    correctIndex: 0,
-  },
-  {
-    id: '16', level: 'C1',
-    question: 'The word "ephemeral" most closely means:',
-    options: ['permanent', 'short-lived', 'enormous', 'frightening'],
-    correctIndex: 1,
-  },
-  {
-    id: '17', level: 'C1',
-    question: 'Not only ___ late, but he also forgot his report.',
-    options: ['he was', 'was he', 'he is', 'is he'],
-    correctIndex: 1,
-  },
-  {
-    id: '18', level: 'C1',
-    question: 'The proposal was met with ___ from the committee.',
-    options: ['approbation', 'appreciation', 'trepidation', 'consternation'],
-    correctIndex: 3,
-  },
-  {
-    id: '19', level: 'C2',
-    question: 'The ___ of the ancient manuscript has baffled scholars.',
-    options: ['provenance', 'providence', 'prominence', 'profoundness'],
-    correctIndex: 0,
-  },
-  {
-    id: '20', level: 'C2',
-    question: 'The law was passed ___ considerable opposition.',
-    options: ['in spite', 'despite of', 'notwithstanding', 'although'],
-    correctIndex: 2,
-  },
+  { id: 1, type: 'grammar', question: 'She ___ to school every day.', options: ['go', 'goes', 'going', 'gone'], correctAnswer: 'goes', level: 'A1' },
+  { id: 2, type: 'vocabulary', question: 'What is the opposite of "happy"?', options: ['sad', 'angry', 'tired', 'hungry'], correctAnswer: 'sad', level: 'A1' },
+  { id: 3, type: 'grammar', question: 'I ___ a doctor when I grow up.', options: ['am', 'be', 'will be', 'was'], correctAnswer: 'will be', level: 'A2' },
+  { id: 4, type: 'vocabulary', question: 'Which word means "very big"?', options: ['tiny', 'enormous', 'narrow', 'shallow'], correctAnswer: 'enormous', level: 'A2' },
+  { id: 5, type: 'grammar', question: 'By the time she arrived, we ___ dinner.', options: ['finished', 'have finished', 'had finished', 'finish'], correctAnswer: 'had finished', level: 'B2' },
+  { id: 6, type: 'vocabulary', question: 'He was ___ by the difficult question.', options: ['perplexed', 'pleased', 'praised', 'prepared'], correctAnswer: 'perplexed', level: 'B2' },
+  { id: 7, type: 'grammar', question: 'If I ___ rich, I would travel the world.', options: ['am', 'was', 'were', 'be'], correctAnswer: 'were', level: 'B1' },
+  { id: 8, type: 'vocabulary', question: 'The politician gave an ___ speech that moved the crowd.', options: ['eloquent', 'elegant', 'elusive', 'elastic'], correctAnswer: 'eloquent', level: 'C1' },
+  { id: 9, type: 'grammar', question: 'I prefer ___ coffee to tea.', options: ['drink', 'drinking', 'to drink', 'drunk'], correctAnswer: 'drinking', level: 'B1' },
+  { id: 10, type: 'vocabulary', question: 'The new policy will ___ affect thousands of workers.', options: ['adversely', 'adventurously', 'adequately', 'acutely'], correctAnswer: 'adversely', level: 'C1' },
+  { id: 11, type: 'grammar', question: 'He ___ here for five years.', options: ['works', 'worked', 'has worked', 'is working'], correctAnswer: 'has worked', level: 'B1' },
+  { id: 12, type: 'vocabulary', question: 'What does "ubiquitous" mean?', options: ['rare', 'everywhere', 'ancient', 'expensive'], correctAnswer: 'everywhere', level: 'C1' },
+  { id: 13, type: 'grammar', question: 'The report ___ by the committee next week.', options: ['will review', 'will be reviewed', 'reviews', 'reviewed'], correctAnswer: 'will be reviewed', level: 'B2' },
+  { id: 14, type: 'vocabulary', question: 'To "procrastinate" means to:', options: ['work hard', 'delay tasks', 'celebrate', 'criticize'], correctAnswer: 'delay tasks', level: 'B2' },
+  { id: 15, type: 'grammar', question: '___ she studies hard, she might fail.', options: ['Although', 'Unless', 'Because', 'While'], correctAnswer: 'Unless', level: 'B2' },
+  { id: 16, type: 'vocabulary', question: 'The scientist\'s ___ research led to a breakthrough.', options: ['meticulous', 'mediocre', 'melodic', 'merciful'], correctAnswer: 'meticulous', level: 'C1' },
+  { id: 17, type: 'grammar', question: 'I wish I ___ more time yesterday.', options: ['have', 'had', 'will have', 'have had'], correctAnswer: 'had', level: 'B2' },
+  { id: 18, type: 'vocabulary', question: 'An "ephemeral" thing lasts:', options: ['forever', 'a short time', 'a long time', 'occasionally'], correctAnswer: 'a short time', level: 'C2' },
+  { id: 19, type: 'grammar', question: 'Had she known about it, she ___ differently.', options: ['acts', 'would act', 'would have acted', 'acted'], correctAnswer: 'would have acted', level: 'C1' },
+  { id: 20, type: 'vocabulary', question: 'To "ameliorate" a situation means to:', options: ['worsen it', 'ignore it', 'improve it', 'describe it'], correctAnswer: 'improve it', level: 'C2' },
 ];
 
-function scoreToLevel(score: number, total: number): string {
-  const pct = score / total;
-  if (pct < 0.15) return 'A1';
-  if (pct < 0.3) return 'A2';
-  if (pct < 0.5) return 'B1';
-  if (pct < 0.65) return 'B2';
-  if (pct < 0.8) return 'C1';
-  return 'C2';
-}
-
-router.get('/test', (_req, res) => {
-  const questions = PLACEMENT_QUESTIONS.map(({ id, level, question, options }) => ({
-    id,
-    level,
-    question,
-    options,
+router.get('/test', requireAuth, (req: AuthRequest, res: Response) => {
+  const questions = PLACEMENT_QUESTIONS.map(({ id, type, question, options, level }) => ({
+    id, type, question, options, level,
   }));
   res.json({ questions });
 });
 
-router.post('/evaluate', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/evaluate', requireApiKey, async (req: AuthRequest, res: Response) => {
   try {
-    const { answers } = req.body as { answers: Array<{ id: string; selectedIndex: number }> };
-    if (!Array.isArray(answers)) {
-      res.status(400).json({ error: 'answers must be an array' });
+    const { answers } = req.body as { answers?: { questionId: number; answer: string }[] };
+    if (!answers || !Array.isArray(answers)) {
+      res.status(400).json({ error: 'Cevaplar gerekli' });
       return;
     }
-    let score = 0;
-    for (const answer of answers) {
-      const q = PLACEMENT_QUESTIONS.find((q) => q.id === answer.id);
-      if (q && q.correctIndex === answer.selectedIndex) score++;
+
+    let result: { level: string; explanation: string; score: number };
+    try {
+      result = await claudeService.evaluatePlacement(req.apiKey!, answers, PLACEMENT_QUESTIONS);
+    } catch {
+      const correct = answers.filter(a => {
+        const q = PLACEMENT_QUESTIONS.find(q => q.id === a.questionId);
+        return q?.correctAnswer === a.answer;
+      }).length;
+      const pct = correct / PLACEMENT_QUESTIONS.length;
+      const level = pct >= 0.9 ? 'C2' : pct >= 0.8 ? 'C1' : pct >= 0.65 ? 'B2' : pct >= 0.5 ? 'B1' : pct >= 0.35 ? 'A2' : 'A1';
+      result = { level, explanation: `${correct}/${PLACEMENT_QUESTIONS.length} doğru cevap.`, score: correct };
     }
-    const level = scoreToLevel(score, PLACEMENT_QUESTIONS.length) as
-      | 'A1'
-      | 'A2'
-      | 'B1'
-      | 'B2'
-      | 'C1'
-      | 'C2';
+
+    const validLevel = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(result.level) ? result.level : 'B1';
     await prisma.user.update({
       where: { id: req.userId },
-      data: { level },
+      data: { level: validLevel as any },
     });
-    res.json({ score, total: PLACEMENT_QUESTIONS.length, level });
+
+    res.json({ level: validLevel, explanation: result.explanation, score: result.score });
   } catch (err) {
     console.error('[placement/evaluate]', err);
     res.status(500).json({ error: 'Değerlendirme başarısız' });

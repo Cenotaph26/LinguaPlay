@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { requireApiKey, ApiKeyRequest } from '../middleware/apiKey';
+import { requireApiKey } from '../middleware/apiKey';
 import { claudeService } from '../services/claude.service';
 import { srsService } from '../services/srs.service';
 
@@ -10,23 +10,28 @@ router.use(requireAuth);
 
 router.get('/words', async (req: AuthRequest, res: Response) => {
   try {
-    const page = parseInt((req.query.page as string) ?? '1', 10);
-    const status = req.query.status as string | undefined;
-    const take = 20;
-    const skip = (page - 1) * take;
+    const { status, page = '1', limit = '20' } = req.query as Record<string, string>;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
     const where: Record<string, unknown> = { userId: req.userId };
     if (status) where.status = status;
-    const [items, total] = await Promise.all([
+
+    const [userWords, total] = await Promise.all([
       prisma.userWord.findMany({
         where,
         include: { word: true },
-        orderBy: { nextReview: 'asc' },
-        take,
+        orderBy: { createdAt: 'desc' },
         skip,
+        take: parseInt(limit),
       }),
       prisma.userWord.count({ where }),
     ]);
-    res.json({ items, total, page, pages: Math.ceil(total / take) });
+
+    res.json({
+      words: userWords.map(uw => ({ ...uw.word, userWord: { id: uw.id, status: uw.status, nextReview: uw.nextReview, interval: uw.interval, easeFactor: uw.easeFactor, repetitions: uw.repetitions } })),
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
+    });
   } catch (err) {
     console.error('[vocabulary/words]', err);
     res.status(500).json({ error: 'Kelimeler alınamadı' });
@@ -35,16 +40,14 @@ router.get('/words', async (req: AuthRequest, res: Response) => {
 
 router.get('/due', async (req: AuthRequest, res: Response) => {
   try {
-    const items = await prisma.userWord.findMany({
-      where: {
-        userId: req.userId,
-        nextReview: { lte: new Date() },
-      },
+    const now = new Date();
+    const due = await prisma.userWord.findMany({
+      where: { userId: req.userId, nextReview: { lte: now }, status: { not: 'MASTERED' } },
       include: { word: true },
       orderBy: { nextReview: 'asc' },
       take: 50,
     });
-    res.json({ items, count: items.length });
+    res.json(due.map(uw => ({ ...uw.word, userWord: { id: uw.id, status: uw.status, nextReview: uw.nextReview, interval: uw.interval, easeFactor: uw.easeFactor, repetitions: uw.repetitions } })));
   } catch (err) {
     console.error('[vocabulary/due]', err);
     res.status(500).json({ error: 'Tekrar edilecek kelimeler alınamadı' });
@@ -53,114 +56,84 @@ router.get('/due', async (req: AuthRequest, res: Response) => {
 
 router.post('/review', async (req: AuthRequest, res: Response) => {
   try {
-    const { wordId, quality } = req.body as { wordId: string; quality: 0 | 1 | 2 | 3 };
-    if (!wordId || ![0, 1, 2, 3].includes(quality)) {
-      res.status(400).json({ error: 'Geçersiz parametre' });
+    const { userWordId, quality } = req.body as { userWordId?: string; quality?: number };
+    if (!userWordId || quality === undefined || quality < 0 || quality > 3) {
+      res.status(400).json({ error: 'userWordId ve quality (0-3) gerekli' });
       return;
     }
-    const userWord = await prisma.userWord.findUnique({
-      where: { userId_wordId: { userId: req.userId!, wordId } },
+    const uw = await prisma.userWord.findFirst({
+      where: { id: userWordId, userId: req.userId },
     });
-    if (!userWord) {
+    if (!uw) {
       res.status(404).json({ error: 'Kelime bulunamadı' });
       return;
     }
-    const result = srsService.calculate(
-      quality,
-      userWord.interval,
-      userWord.easeFactor,
-      userWord.repetitions
+    const { interval, easeFactor, repetitions } = srsService.updateSRS(
+      quality as 0 | 1 | 2 | 3,
+      uw.interval,
+      uw.easeFactor,
+      uw.repetitions,
     );
+    const nextReview = new Date();
+    nextReview.setDate(nextReview.getDate() + interval);
+
+    let status: 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED' = 'LEARNING';
+    if (repetitions >= 5 && interval >= 14) status = 'MASTERED';
+    else if (repetitions >= 2) status = 'REVIEW';
+
     const updated = await prisma.userWord.update({
-      where: { userId_wordId: { userId: req.userId!, wordId } },
-      data: {
-        interval: result.interval,
-        easeFactor: result.easeFactor,
-        repetitions: result.repetitions,
-        nextReview: result.nextReview,
-        status: result.status,
-      },
+      where: { id: userWordId },
+      data: { interval, easeFactor, repetitions, nextReview, status },
     });
     res.json(updated);
   } catch (err) {
     console.error('[vocabulary/review]', err);
-    res.status(500).json({ error: 'Tekrar kaydedilemedi' });
+    res.status(500).json({ error: 'İnceleme kaydedilemedi' });
   }
 });
 
-router.get(
-  '/:wordId/explain',
-  requireApiKey,
-  async (req: ApiKeyRequest, res: Response) => {
-    try {
-      const { wordId } = req.params;
-      const userWord = await prisma.userWord.findUnique({
-        where: { userId_wordId: { userId: req.userId!, wordId } },
-        include: { word: true },
-      });
-      if (!userWord) {
-        res.status(404).json({ error: 'Kelime bulunamadı' });
-        return;
-      }
-      const user = await prisma.user.findUnique({
-        where: { id: req.userId },
-        select: { level: true },
-      });
-      const explanation = await claudeService.explainWord(
-        req.apiKey!,
-        userWord.word.word,
-        userWord.word.examples[0] ?? '',
-        user?.level ?? 'B1'
-      );
-      res.json(explanation);
-    } catch (err) {
-      console.error('[vocabulary/explain]', err);
-      res.status(500).json({ error: 'Açıklama alınamadı' });
-    }
-  }
-);
-
-router.post('/words', async (req: AuthRequest, res: Response) => {
+router.post('/add', async (req: AuthRequest, res: Response) => {
   try {
     const { word, definition, definitionTr, examples, phonetic, level } = req.body as {
-      word: string;
-      definition: string;
-      definitionTr: string;
-      examples?: string[];
-      phonetic?: string;
-      level: string;
+      word?: string; definition?: string; definitionTr?: string;
+      examples?: string[]; phonetic?: string; level?: string;
     };
-    if (!word || !definition || !level) {
-      res.status(400).json({ error: 'word, definition ve level zorunlu' });
+    if (!word || !definition || !definitionTr || !level) {
+      res.status(400).json({ error: 'word, definition, definitionTr ve level gerekli' });
       return;
     }
-    const validLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'UNSET'];
-    if (!validLevels.includes(level)) {
-      res.status(400).json({ error: 'Geçersiz seviye' });
-      return;
-    }
-    const wordRecord = await prisma.word.upsert({
+    const dbWord = await prisma.word.upsert({
       where: { word: word.toLowerCase() },
+      create: { word: word.toLowerCase(), definition, definitionTr, examples: examples ?? [], phonetic, level: level as any },
       update: {},
-      create: {
-        word: word.toLowerCase(),
-        definition,
-        definitionTr: definitionTr ?? '',
-        examples: examples ?? [],
-        phonetic,
-        level: level as 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2',
-      },
     });
     const userWord = await prisma.userWord.upsert({
-      where: { userId_wordId: { userId: req.userId!, wordId: wordRecord.id } },
+      where: { userId_wordId: { userId: req.userId, wordId: dbWord.id } },
+      create: { userId: req.userId, wordId: dbWord.id },
       update: {},
-      create: { userId: req.userId!, wordId: wordRecord.id },
-      include: { word: true },
     });
-    res.status(201).json(userWord);
+    res.json({ ...dbWord, userWord });
   } catch (err) {
-    console.error('[vocabulary/words POST]', err);
+    console.error('[vocabulary/add]', err);
     res.status(500).json({ error: 'Kelime eklenemedi' });
+  }
+});
+
+router.get('/:wordId/explain', requireApiKey, async (req: AuthRequest, res: Response) => {
+  try {
+    const { wordId } = req.params;
+    const { context = '' } = req.query as { context?: string };
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { level: true } });
+    const word = await prisma.word.findUnique({ where: { id: wordId } });
+    if (!word) {
+      res.status(404).json({ error: 'Kelime bulunamadı' });
+      return;
+    }
+    const explanation = await claudeService.explainWord(req.apiKey!, word.word, context, user?.level ?? 'B1');
+    res.json(explanation);
+  } catch (err) {
+    console.error('[vocabulary/explain]', err);
+    res.status(500).json({ error: 'Açıklama alınamadı' });
   }
 });
 
