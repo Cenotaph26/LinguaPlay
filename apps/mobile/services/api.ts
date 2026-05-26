@@ -23,16 +23,16 @@ export interface Word {
 
 export interface UserWord {
   id: string;
-  wordId: string;
-  status: 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED';
-  nextReview: string;
-  interval: number;
-  easeFactor: number;
-  repetitions: number;
-  word: Word;
+  word: string;
+  definition: string;
+  definitionTr: string;
+  examples: string[];
+  phonetic?: string;
+  audioUrl?: string;
+  level: string;
   userWord: {
     id: string;
-    status: string;
+    status: 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED';
     nextReview: string;
     interval: number;
     easeFactor: number;
