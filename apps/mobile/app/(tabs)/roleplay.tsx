@@ -66,8 +66,8 @@ export default function Roleplay() {
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
+      <View style={{ flex: 1 }}>
       <ScrollView
-        style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
@@ -178,6 +178,7 @@ export default function Roleplay() {
           </View>
         )}
       </ScrollView>
+      </View>
 
       <Modal visible={customModal} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: '#000000aa', justifyContent: 'flex-end' }}>
