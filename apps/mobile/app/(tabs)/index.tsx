@@ -122,25 +122,9 @@ export default function Dashboard() {
           </TouchableOpacity>
         )}
 
-        {/* Due words banner */}
-        {dueCount > 0 && (
-          <TouchableOpacity
-            onPress={() => router.push('/review')}
-            style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(115,85,247,0.25)' }}
-          >
-            <View style={{ backgroundColor: '#7355F7', borderRadius: 10, padding: 8 }}>
-              <Ionicons name="time-outline" size={20} color="#fff" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 15 }}>Tekrar Zamanı!</Text>
-              <Text style={{ color: '#6B638F', fontSize: 13 }}>{dueCount} kelime seni bekliyor</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#7355F7" />
-          </TouchableOpacity>
-        )}
-
         {/* Stats */}
-        <View className="flex-row mb-5" style={{ gap: 8 }}>
+        <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#9B94CC', marginBottom: 8 }}>İstatistikler</Text>
+        <View className="flex-row mb-4" style={{ gap: 8 }}>
           {[
             { label: 'Gün Serisi', value: streak, icon: 'flame-outline' as IconName, color: '#F59E0B' },
             { label: 'Kelime öğrenildi', value: stats?.wordCount ?? 0, icon: 'book-outline' as IconName, color: '#0E9E80' },
@@ -152,6 +136,23 @@ export default function Dashboard() {
             </View>
           ))}
         </View>
+
+        {/* Bugünkü tekrar */}
+        {dueCount > 0 && (
+          <TouchableOpacity
+            onPress={() => router.push('/review')}
+            style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 14, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(115,85,247,0.25)' }}
+          >
+            <View style={{ width: 40, height: 40, backgroundColor: '#7355F7', borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="layers-outline" size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 14 }}>{dueCount} kelime sırada</Text>
+              <Text style={{ color: '#6B638F', fontSize: 12 }}>Bugünkü tekrar zamanı</Text>
+            </View>
+            <Ionicons name="arrow-forward" size={18} color="#7355F7" />
+          </TouchableOpacity>
+        )}
 
         {/* Quick Actions */}
         <Text className="text-text2 text-sm font-semibold mb-3">Hızlı Erişim</Text>

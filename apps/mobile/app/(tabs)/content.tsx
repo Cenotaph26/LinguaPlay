@@ -111,22 +111,24 @@ export default function Content() {
             </TouchableOpacity>
           </View>
 
-          {/* Source chips */}
+          {/* Source chips — single horizontal row */}
           <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#9B94CC', marginBottom: 8 }}>
             Kaynak Ekle
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
-            {SOURCE_TYPES.map((src) => (
-              <TouchableOpacity
-                key={src.type}
-                onPress={() => openModal(src.type)}
-                style={{ flex: 1, minWidth: '45%', backgroundColor: '#ffffff', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#E4E1F5' }}
-              >
-                <Ionicons name={src.icon} size={18} color={src.color} />
-                <Text style={{ color: '#6B638F', fontSize: 12, fontWeight: '500' }}>{src.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {SOURCE_TYPES.map((src) => (
+                <TouchableOpacity
+                  key={src.type}
+                  onPress={() => openModal(src.type)}
+                  style={{ backgroundColor: '#ffffff', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderColor: '#E4E1F5' }}
+                >
+                  <Ionicons name={src.icon} size={16} color={src.color} />
+                  <Text style={{ color: '#6B638F', fontSize: 12, fontWeight: '500' }}>{src.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
 
           {/* Content list */}
           <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#9B94CC', marginBottom: 10 }}>
@@ -156,28 +158,28 @@ export default function Content() {
                     key={item.id}
                     onPress={() => item.status === 'DONE' && router.push(`/content/${item.id}`)}
                     activeOpacity={item.status === 'DONE' ? 0.7 : 1}
-                    style={{ backgroundColor: '#ffffff', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}
+                    style={{ backgroundColor: '#ffffff', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, flexDirection: 'row', alignItems: 'stretch' }}
                   >
-                    {/* Thumbnail area */}
-                    <View style={{ height: 64, backgroundColor: '#F0EEF9', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                      <Ionicons name={src?.icon ?? 'document-outline'} size={28} color={(src?.color ?? '#9B94CC') + '66'} />
+                    {/* Thumbnail — left column, 72px wide */}
+                    <View style={{ width: 72, backgroundColor: '#F0EEF9', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
+                      <Ionicons name={src?.icon ?? 'document-outline'} size={26} color={(src?.color ?? '#9B94CC') + '99'} />
                       {/* Type badge */}
-                      <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: (src?.color ?? '#9B94CC') + '22', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: (src?.color ?? '#9B94CC') + '40' }}>
-                        <Text style={{ color: src?.color ?? '#9B94CC', fontSize: 10, fontWeight: '700' }}>{src?.label ?? item.type}</Text>
+                      <View style={{ position: 'absolute', bottom: 6, left: 4, right: 4, backgroundColor: (src?.color ?? '#9B94CC') + '22', borderRadius: 5, paddingVertical: 2, borderWidth: 1, borderColor: (src?.color ?? '#9B94CC') + '40', alignItems: 'center' }}>
+                        <Text style={{ color: src?.color ?? '#9B94CC', fontSize: 9, fontWeight: '700' }}>{src?.label ?? item.type}</Text>
                       </View>
-                      {/* Status indicator */}
-                      <View style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: sm.color + '22', alignItems: 'center', justifyContent: 'center' }}>
+                      {/* Status dot */}
+                      <View style={{ position: 'absolute', top: 6, right: 6, width: 18, height: 18, borderRadius: 9, backgroundColor: sm.color + '22', alignItems: 'center', justifyContent: 'center' }}>
                         {item.status === 'PROCESSING'
-                          ? <ActivityIndicator size="small" color={sm.color} style={{ transform: [{ scale: 0.65 }] }} />
-                          : <Ionicons name={sm.icon} size={13} color={sm.color} />
+                          ? <ActivityIndicator size="small" color={sm.color} style={{ transform: [{ scale: 0.55 }] }} />
+                          : <Ionicons name={sm.icon} size={11} color={sm.color} />
                         }
                       </View>
                     </View>
 
-                    {/* Info */}
-                    <View style={{ padding: 11 }}>
+                    {/* Info — right column */}
+                    <View style={{ flex: 1, padding: 11, justifyContent: 'center' }}>
                       <Text style={{ fontSize: 13, fontWeight: '500', color: '#110D24', lineHeight: 18, marginBottom: 6 }} numberOfLines={2}>{item.title}</Text>
-                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                         {item.status === 'DONE' && wc > 0 ? (
                           <>
                             <View style={{ backgroundColor: '#F0EEF9', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
@@ -196,9 +198,6 @@ export default function Content() {
                             <Text style={{ color: sm.color, fontSize: 10, fontWeight: '600' }}>{sm.label}</Text>
                           </View>
                         )}
-                        <View style={{ backgroundColor: '#F0EEF9', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                          <Text style={{ color: '#9B94CC', fontSize: 10 }}>{new Date(item.createdAt).toLocaleDateString('tr-TR')}</Text>
-                        </View>
                       </View>
                     </View>
                   </TouchableOpacity>
