@@ -7,13 +7,97 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { roleplayApi } from '../../services/api';
+import { roleplayApi, vocabularyApi } from '../../services/api';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
   correction?: { original: string; suggestion: string; explanation: string } | null;
+}
+
+function FeedbackScreen({ feedback }: { feedback: { fluencyScore: number; grammarMistakes: string[]; newVocabulary: string[]; suggestions: string } }) {
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState<Record<string, boolean>>({});
+
+  async function saveWord(word: string) {
+    setSaving((s) => ({ ...s, [word]: true }));
+    try {
+      await vocabularyApi.saveWord(word);
+      setSaved((s) => ({ ...s, [word]: true }));
+    } catch {
+      Alert.alert('Hata', 'Kelime kaydedilemedi. Kelime veritabanında olmayabilir.');
+    } finally {
+      setSaving((s) => ({ ...s, [word]: false }));
+    }
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F3FF' }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
+        <Text style={{ color: '#110D24', fontSize: 22, fontWeight: 'bold', marginBottom: 4 }}>Oturum Bitti</Text>
+        <Text style={{ color: '#9B94CC', fontSize: 14, marginBottom: 24 }}>Geri bildiriminiz hazır</Text>
+
+        <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <Text style={{ color: '#6B638F', fontSize: 14 }}>Akıcılık Puanı</Text>
+            <Text style={{ color: '#7355F7', fontSize: 28, fontWeight: 'bold' }}>{feedback.fluencyScore}/10</Text>
+          </View>
+          {feedback.grammarMistakes.length > 0 && (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ color: '#110D24', fontWeight: '600', marginBottom: 8 }}>Dilbilgisi Düzeltmeleri</Text>
+              {feedback.grammarMistakes.map((m, i) => (
+                <Text key={i} style={{ color: '#6B638F', fontSize: 13, marginBottom: 4 }}>• {m}</Text>
+              ))}
+            </View>
+          )}
+          {feedback.newVocabulary.length > 0 && (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ color: '#110D24', fontWeight: '600', marginBottom: 8 }}>Yeni Kelimeler</Text>
+              <View style={{ gap: 8 }}>
+                {feedback.newVocabulary.map((w, i) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 }}>
+                      <Text style={{ color: '#8B6EFF', fontSize: 13 }}>{w}</Text>
+                    </View>
+                    {saved[w] ? (
+                      <View style={{ backgroundColor: 'rgba(14,158,128,0.10)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+                        <Ionicons name="checkmark" size={14} color="#0E9E80" />
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        onPress={() => saveWord(w)}
+                        disabled={saving[w]}
+                        style={{ backgroundColor: 'rgba(115,85,247,0.10)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(115,85,247,0.2)' }}
+                      >
+                        {saving[w]
+                          ? <ActivityIndicator size="small" color="#7355F7" />
+                          : <Text style={{ color: '#7355F7', fontSize: 12, fontWeight: '600' }}>Ekle</Text>
+                        }
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+          {feedback.suggestions && (
+            <View>
+              <Text style={{ color: '#110D24', fontWeight: '600', marginBottom: 6 }}>Öneri</Text>
+              <Text style={{ color: '#6B638F', fontSize: 13 }}>{feedback.suggestions}</Text>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          onPress={() => router.replace('/(tabs)/roleplay')}
+          style={{ backgroundColor: '#7355F7', borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Sahne Listesine Dön</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
 function CorrectionBadge({ correction }: { correction: { original: string; suggestion: string; explanation: string } }) {
@@ -126,54 +210,7 @@ export default function RoleplayChat() {
   }, [messages.length]);
 
   if (ended && feedback) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F3FF' }}>
-        <View style={{ flex: 1, padding: 24 }}>
-          <Text style={{ color: '#110D24', fontSize: 22, fontWeight: 'bold', marginBottom: 4 }}>Oturum Bitti</Text>
-          <Text style={{ color: '#9B94CC', fontSize: 14, marginBottom: 24 }}>Geri bildiriminiz hazır</Text>
-
-          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <Text style={{ color: '#6B638F', fontSize: 14 }}>Akıcılık Puanı</Text>
-              <Text style={{ color: '#7355F7', fontSize: 28, fontWeight: 'bold' }}>{feedback.fluencyScore}/10</Text>
-            </View>
-            {feedback.grammarMistakes.length > 0 && (
-              <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: '#110D24', fontWeight: '600', marginBottom: 8 }}>Dilbilgisi Düzeltmeleri</Text>
-                {feedback.grammarMistakes.map((m, i) => (
-                  <Text key={i} style={{ color: '#6B638F', fontSize: 13, marginBottom: 4 }}>• {m}</Text>
-                ))}
-              </View>
-            )}
-            {feedback.newVocabulary.length > 0 && (
-              <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: '#110D24', fontWeight: '600', marginBottom: 8 }}>Yeni Kelimeler</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                  {feedback.newVocabulary.map((w, i) => (
-                    <View key={i} style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 }}>
-                      <Text style={{ color: '#8B6EFF', fontSize: 13 }}>{w}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-            {feedback.suggestions && (
-              <View>
-                <Text style={{ color: '#110D24', fontWeight: '600', marginBottom: 6 }}>Öneri</Text>
-                <Text style={{ color: '#6B638F', fontSize: 13 }}>{feedback.suggestions}</Text>
-              </View>
-            )}
-          </View>
-
-          <TouchableOpacity
-            onPress={() => router.replace('/(tabs)/roleplay')}
-            style={{ backgroundColor: '#7355F7', borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
-          >
-            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Sahne Listesine Dön</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
+    return <FeedbackScreen feedback={feedback} />;
   }
 
   return (

@@ -27,6 +27,8 @@ const QUICK_ACTIONS: Array<{ label: string; sub: string; icon: IconName; route: 
 
 export default function Dashboard() {
   const user = useAuthStore((s) => s.user);
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Günaydın' : hour < 18 ? 'İyi Günler' : 'İyi Akşamlar';
 
   const { data: stats } = useQuery({
     queryKey: ['profile-stats'],
@@ -55,7 +57,7 @@ export default function Dashboard() {
         {/* Header */}
         <View className="py-5" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <View style={{ flex: 1 }}>
-            <Text className="text-text3 text-sm">Hoş geldin</Text>
+            <Text className="text-text3 text-sm">{greeting}</Text>
             <Text className="text-2xl font-bold text-text1">{user?.email?.split('@')[0] ?? 'Öğrenci'}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -29,12 +29,23 @@ const FILTER_OPTS = [
   { label: 'Ustalaşıldı', value: 'MASTERED' },
 ];
 
+interface ExplainData {
+  definition: string;
+  definitionTr: string;
+  phonetic: string;
+  examples: string[];
+  synonyms: string[];
+}
+
 export default function Vocabulary() {
   const [tab, setTab] = useState<'review' | 'list'>('review');
   const [cardIndex, setCardIndex] = useState(0);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [doneToday, setDoneToday] = useState(false);
   const [listFilter, setListFilter] = useState('');
+  const [selectedWord, setSelectedWord] = useState<UserWord | null>(null);
+  const [explainData, setExplainData] = useState<ExplainData | null>(null);
+  const [explainLoading, setExplainLoading] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: dueData, isLoading: dueLoading } = useQuery({
@@ -76,6 +87,24 @@ export default function Vocabulary() {
     }
   }
 
+  async function handleExplainWord(word: UserWord) {
+    setSelectedWord(word);
+    setExplainData(null);
+  }
+
+  async function fetchExplanation() {
+    if (!selectedWord) return;
+    setExplainLoading(true);
+    try {
+      const res = await vocabularyApi.explainWord(selectedWord.id);
+      setExplainData(res.data);
+    } catch {
+      Alert.alert('Hata', 'AI açıklaması alınamadı. API key gerekli.');
+    } finally {
+      setExplainLoading(false);
+    }
+  }
+
   function startOver() {
     setCardIndex(0);
     setReviewedCount(0);
@@ -95,6 +124,90 @@ export default function Vocabulary() {
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
+      {/* Word Detail Modal */}
+      <Modal
+        visible={!!selectedWord}
+        transparent
+        animationType="slide"
+        onRequestClose={() => { setSelectedWord(null); setExplainData(null); }}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(17,13,36,0.45)', justifyContent: 'flex-end' }}
+          onPress={() => { setSelectedWord(null); setExplainData(null); }}
+        >
+          <Pressable onPress={() => {}} style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' }}>
+            {selectedWord && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Handle bar */}
+                <View style={{ width: 36, height: 4, backgroundColor: '#E4E1F5', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={{ fontSize: 24, fontWeight: '700', color: '#110D24', flex: 1 }}>{selectedWord.word}</Text>
+                  <View style={{ backgroundColor: (LEVEL_COLORS[selectedWord.level] ?? '#9B94CC') + '1a', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: (LEVEL_COLORS[selectedWord.level] ?? '#9B94CC') + '40' }}>
+                    <Text style={{ color: LEVEL_COLORS[selectedWord.level] ?? '#9B94CC', fontSize: 11, fontWeight: '700' }}>{selectedWord.level}</Text>
+                  </View>
+                </View>
+                {selectedWord.phonetic && (
+                  <Text style={{ color: '#6B638F', fontSize: 13, fontStyle: 'italic', marginBottom: 10 }}>{selectedWord.phonetic}</Text>
+                )}
+                <Text style={{ color: '#6B638F', fontSize: 14, lineHeight: 21, marginBottom: 4 }}>{selectedWord.definition}</Text>
+                <Text style={{ color: '#7355F7', fontSize: 14, marginBottom: 12 }}>{selectedWord.definitionTr}</Text>
+                {selectedWord.examples?.[0] && (
+                  <View style={{ borderLeftWidth: 2, borderLeftColor: '#7355F7', paddingLeft: 10, backgroundColor: '#F0EEF9', borderRadius: 6, padding: 10, marginBottom: 16 }}>
+                    <Text style={{ fontSize: 13, color: '#6B638F', fontStyle: 'italic', lineHeight: 19 }}>"{selectedWord.examples[0]}"</Text>
+                  </View>
+                )}
+
+                {/* AI Explanation Section */}
+                {explainData ? (
+                  <View style={{ backgroundColor: '#F0EEF9', borderRadius: 12, padding: 14, marginBottom: 16, gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <Ionicons name="sparkles" size={14} color="#7355F7" />
+                      <Text style={{ color: '#7355F7', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 }}>AI AÇIKLAMASI</Text>
+                    </View>
+                    <Text style={{ color: '#110D24', fontSize: 13, lineHeight: 20 }}>{explainData.definition}</Text>
+                    <Text style={{ color: '#6B638F', fontSize: 13 }}>{explainData.definitionTr}</Text>
+                    {explainData.synonyms?.length > 0 && (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                        <Text style={{ color: '#9B94CC', fontSize: 12 }}>Eş anlamlı: </Text>
+                        {explainData.synonyms.map((s, i) => (
+                          <View key={i} style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                            <Text style={{ color: '#7355F7', fontSize: 12 }}>{s}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                    {explainData.examples?.[0] && (
+                      <Text style={{ color: '#9B94CC', fontSize: 12, fontStyle: 'italic' }}>"{explainData.examples[0]}"</Text>
+                    )}
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={fetchExplanation}
+                    disabled={explainLoading}
+                    style={{ backgroundColor: '#7355F7', borderRadius: 12, paddingVertical: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 16 }}
+                  >
+                    {explainLoading
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Ionicons name="sparkles-outline" size={16} color="#fff" />
+                    }
+                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+                      {explainLoading ? 'Açıklanıyor...' : 'AI ile Açıkla'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  onPress={() => { setSelectedWord(null); setExplainData(null); }}
+                  style={{ borderRadius: 12, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: '#E4E1F5' }}
+                >
+                  <Text style={{ color: '#9B94CC', fontWeight: '600', fontSize: 14 }}>Kapat</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
       <View style={{ flex: 1 }}>
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }}>
@@ -282,14 +395,14 @@ export default function Vocabulary() {
                   {listWords.map((item) => {
                     const sc = STATUS_COLORS[item.userWord?.status ?? 'NEW'] ?? '#9B94CC';
                     return (
-                      <View key={item.id} style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 12, paddingVertical: 11, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}>
+                      <TouchableOpacity key={item.id} onPress={() => { setExplainData(null); handleExplainWord(item); }} activeOpacity={0.7} style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 12, paddingVertical: 11, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}>
                         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: sc, flexShrink: 0 }} />
                         <View style={{ flex: 1 }}>
                           <Text style={{ fontSize: 14, fontWeight: '500', color: '#110D24' }}>{item.word}</Text>
                           <Text style={{ fontSize: 12, color: '#9B94CC' }} numberOfLines={1}>{item.definitionTr || item.definition}</Text>
                         </View>
                         <Text style={{ fontSize: 10, color: '#9B94CC' }}>{nextReviewLabel(item)}</Text>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })}
                   <Text style={{ color: '#9B94CC', fontSize: 11, textAlign: 'center', marginTop: 8 }}>
