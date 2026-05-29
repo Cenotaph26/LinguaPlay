@@ -183,21 +183,45 @@ export default function RoleplayChat() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E4E1F5', gap: 12 }}>
-          <TouchableOpacity onPress={() => router.back()}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E4E1F5', gap: 10 }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 2 }}>
             <Ionicons name="arrow-back" size={22} color="#6B638F" />
           </TouchableOpacity>
-          <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 16, flex: 1 }}>Konuşma Pratiği</Text>
+          {/* AI avatar */}
+          <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#F0EEF9', borderWidth: 1, borderColor: '#E4E1F5', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Ionicons name="person-outline" size={16} color="#6B638F" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 14 }} numberOfLines={1}>
+              {sessionData?.scene?.titleTr ?? sessionData?.customScene?.slice(0, 30) ?? 'Konuşma Pratiği'}
+            </Text>
+            <Text style={{ color: '#9B94CC', fontSize: 11 }}>
+              {sessionData?.scene ? `${sessionData.scene.category} · Aktif` : 'Özel sahne · Aktif'}
+            </Text>
+          </View>
+          {/* Hint button */}
+          <TouchableOpacity
+            onPress={() => {
+              const hintMsg = "Could you give me a hint or suggestion for what I should say next?";
+              setMessages((prev) => [...prev, { role: 'user', content: hintMsg, timestamp: new Date().toISOString() }]);
+              sendMutation.mutate(hintMsg);
+            }}
+            disabled={sendMutation.isPending}
+            style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(115,85,247,0.2)' }}
+          >
+            <Text style={{ color: '#7355F7', fontSize: 11, fontWeight: '600' }}>İpucu</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => Alert.alert('Oturumu Bitir', 'Oturumu bitirip geri bildirim almak istiyor musun?', [
               { text: 'Devam Et' },
               { text: 'Bitir', style: 'destructive', onPress: () => endMutation.mutate() },
             ])}
             disabled={endMutation.isPending || messages.length < 2}
+            style={{ paddingLeft: 4 }}
           >
             {endMutation.isPending
               ? <ActivityIndicator size="small" color="#7355F7" />
-              : <Text style={{ color: messages.length >= 2 ? '#7355F7' : '#E4E1F5', fontWeight: '600' }}>Bitir</Text>
+              : <Text style={{ color: messages.length >= 2 ? '#7355F7' : '#E4E1F5', fontWeight: '600', fontSize: 13 }}>Bitir</Text>
             }
           </TouchableOpacity>
         </View>

@@ -18,11 +18,11 @@ const LEVEL_XP: Record<string, { name: string; min: number; max: number }> = {
   C2: { name: 'Ustalık', min: 7000, max: 10000 },
 };
 
-const QUICK_ACTIONS: Array<{ label: string; icon: IconName; route: string; color: string }> = [
-  { label: 'Tekrar', icon: 'refresh-outline', route: '/review', color: '#7355F7' },
-  { label: 'Rol Yapma', icon: 'chatbubbles-outline', route: '/(tabs)/roleplay', color: '#7355F7' },
-  { label: 'İçerik', icon: 'play-circle-outline', route: '/(tabs)/content', color: '#F59E0B' },
-  { label: 'Quiz', icon: 'help-circle-outline', route: '/quiz', color: '#0E9E80' },
+const QUICK_ACTIONS: Array<{ label: string; sub: string; icon: IconName; route: string; color: string }> = [
+  { label: 'Role-play',   sub: 'Sahne seç veya yaz', icon: 'chatbubbles-outline',  route: '/(tabs)/roleplay', color: '#7355F7' },
+  { label: 'İçerik Ekle', sub: 'Video · PDF · dizi',  icon: 'play-circle-outline', route: '/(tabs)/content',  color: '#F59E0B' },
+  { label: 'Quiz',        sub: '10 soruluk test',      icon: 'help-circle-outline', route: '/quiz',           color: '#0E9E80' },
+  { label: 'Tekrar',      sub: 'Günlük SRS tekrarı',   icon: 'refresh-outline',     route: '/review',         color: '#7355F7' },
 ];
 
 export default function Dashboard() {
@@ -166,6 +166,7 @@ export default function Dashboard() {
                 <Ionicons name={action.icon} size={20} color={action.color} />
               </View>
               <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 14 }}>{action.label}</Text>
+              <Text style={{ color: '#9B94CC', fontSize: 11 }}>{action.sub}</Text>
             </TouchableOpacity>
           ))}
         </View>

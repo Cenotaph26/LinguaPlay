@@ -11,24 +11,27 @@ import { contentApi, ContentItem } from '../../services/api';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const CONTENT_TYPES: Array<{ type: string; icon: IconName; label: string; color: string; placeholder: string }> = [
-  { type: 'YOUTUBE', icon: 'logo-youtube', label: 'YouTube', color: '#E84E32', placeholder: 'YouTube video URL...' },
-  { type: 'ARTICLE', icon: 'newspaper-outline', label: 'Makale', color: '#0E9E80', placeholder: 'Makale URL...' },
-  { type: 'SUBTITLE', icon: 'film-outline', label: 'Altyazı', color: '#F59E0B', placeholder: 'Altyazı metnini yapıştır...' },
+interface SourceType {
+  type: string;
+  icon: IconName;
+  label: string;
+  color: string;
+  placeholder: string;
+  multiline?: boolean;
+}
+
+const SOURCE_TYPES: SourceType[] = [
+  { type: 'YOUTUBE',  icon: 'logo-youtube',     label: 'YouTube',       color: '#E84E32', placeholder: 'YouTube video URL...' },
+  { type: 'SUBTITLE', icon: 'film-outline',      label: 'Altyazı (.srt)', color: '#F59E0B', placeholder: 'Altyazı metnini yapıştır...', multiline: true },
+  { type: 'PDF',      icon: 'document-outline',  label: 'PDF',           color: '#7355F7', placeholder: 'PDF metnini yapıştır...', multiline: true },
+  { type: 'ARTICLE',  icon: 'globe-outline',     label: 'Makale URL',    color: '#0E9E80', placeholder: 'Makale URL...' },
 ];
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: '#F59E0B',
-  PROCESSING: '#7355F7',
-  DONE: '#0E9E80',
-  FAILED: '#E84E32',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Bekliyor',
-  PROCESSING: 'İşleniyor',
-  DONE: 'Hazır',
-  FAILED: 'Hata',
+const STATUS_META: Record<string, { label: string; color: string; icon: IconName }> = {
+  PENDING:    { label: 'Bekliyor',   color: '#F59E0B', icon: 'time-outline' },
+  PROCESSING: { label: 'İşleniyor', color: '#7355F7', icon: 'sync-outline' },
+  DONE:       { label: 'Hazır',     color: '#0E9E80', icon: 'checkmark-circle' },
+  FAILED:     { label: 'Hata',      color: '#E84E32', icon: 'close-circle' },
 };
 
 export default function Content() {
@@ -59,7 +62,7 @@ export default function Content() {
     },
     onError: (err: any) => {
       if (err.response?.status === 402) {
-        Alert.alert('API Anahtarı Gerekli', 'Lütfen önce Profil sayfasından Claude API anahtarınızı ekleyin.', [
+        Alert.alert('API Anahtarı Gerekli', 'İçerik analizi için Claude API anahtarı gerekli.', [
           { text: 'Profil', onPress: () => router.push('/(tabs)/profile') },
           { text: 'İptal' },
         ]);
@@ -69,83 +72,135 @@ export default function Content() {
     },
   });
 
-  const handleAdd = () => {
-    const ct = CONTENT_TYPES.find((c) => c.type === selectedType)!;
+  function openModal(type: string) {
+    setSelectedType(type);
+    setInputText('');
+    setAddModal(true);
+  }
+
+  function handleAdd() {
     if (!inputText.trim()) return;
-    if (selectedType === 'SUBTITLE') {
-      addMutation.mutate({ type: selectedType, transcript: inputText.trim(), title: 'Altyazı' });
-    } else {
-      addMutation.mutate({ type: selectedType, url: inputText.trim() });
-    }
-  };
+    const isText = selectedType === 'SUBTITLE' || selectedType === 'PDF';
+    addMutation.mutate(
+      isText
+        ? { type: selectedType, transcript: inputText.trim(), title: selectedType === 'PDF' ? 'PDF' : 'Altyazı' }
+        : { type: selectedType, url: inputText.trim() }
+    );
+  }
+
+  const currentSource = SOURCE_TYPES.find((s) => s.type === selectedType)!;
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
-      <View className="flex-1 px-5">
-        <View className="py-5 flex-row items-center justify-between">
-          <View>
-            <Text className="text-2xl font-bold text-text1">İçerik Analizi</Text>
-            <Text className="text-text3 text-sm mt-1">Seviyene göre içerik öğren</Text>
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={{ paddingTop: 20, paddingBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: '#110D24' }}>İçeriklerim</Text>
+              <Text style={{ fontSize: 12, color: '#9B94CC', marginTop: 2 }}>Video, makale ve altyazıdan kelime öğren</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => openModal('YOUTUBE')}
+              style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: 'rgba(115,85,247,0.08)', borderWidth: 1, borderColor: 'rgba(115,85,247,0.25)', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Ionicons name="add" size={20} color="#7355F7" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            onPress={() => setAddModal(true)}
-            style={{ backgroundColor: '#7355F7', borderRadius: 10, padding: 10 }}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Source chips */}
+          <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#9B94CC', marginBottom: 8 }}>
+            Kaynak Ekle
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+            {SOURCE_TYPES.map((src) => (
+              <TouchableOpacity
+                key={src.type}
+                onPress={() => openModal(src.type)}
+                style={{ flex: 1, minWidth: '45%', backgroundColor: '#ffffff', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#E4E1F5' }}
+              >
+                <Ionicons name={src.icon} size={18} color={src.color} />
+                <Text style={{ color: '#6B638F', fontSize: 12, fontWeight: '500' }}>{src.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Content list */}
+          <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#9B94CC', marginBottom: 10 }}>
+            Analizlerim
+          </Text>
+
           {isLoading ? (
-            <View className="items-center py-8">
+            <View style={{ alignItems: 'center', paddingVertical: 32 }}>
               <ActivityIndicator color="#7355F7" />
             </View>
-          ) : items.length === 0 ? (
-            <View className="items-center justify-center py-16">
+          ) : (items as ContentItem[]).length === 0 ? (
+            <View style={{ alignItems: 'center', paddingVertical: 48 }}>
               <Ionicons name="play-circle-outline" size={48} color="#E4E1F5" />
-              <Text className="text-text3 mt-4 text-center">
-                Henüz içerik eklenmedi{'\n'}YouTube veya makale ekleyerek başlayın
+              <Text style={{ color: '#9B94CC', marginTop: 12, fontSize: 14, textAlign: 'center' }}>
+                Henüz içerik eklenmedi{'\n'}Yukarıdan kaynak seçerek başlayın
               </Text>
-              <TouchableOpacity
-                onPress={() => setAddModal(true)}
-                style={{ marginTop: 16, backgroundColor: '#7355F7', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12 }}
-              >
-                <Text style={{ color: '#fff', fontWeight: '600' }}>İçerik Ekle</Text>
-              </TouchableOpacity>
             </View>
           ) : (
-            <View style={{ gap: 10, paddingBottom: 24 }}>
-              {items.map((item: ContentItem) => {
-                const sc = STATUS_COLORS[item.status] ?? '#9B94CC';
-                const typeData = CONTENT_TYPES.find((c) => c.type === item.type);
+            <View style={{ gap: 10 }}>
+              {(items as ContentItem[]).map((item) => {
+                const src = SOURCE_TYPES.find((s) => s.type === item.type);
+                const sm = STATUS_META[item.status] ?? STATUS_META.PENDING;
+                const wc = item._count?.words ?? 0;
+                const pc = item._count?.phrases ?? 0;
                 return (
                   <TouchableOpacity
                     key={item.id}
                     onPress={() => item.status === 'DONE' && router.push(`/content/${item.id}`)}
-                    className="bg-bg2 border border-border rounded-xl p-4"
+                    activeOpacity={item.status === 'DONE' ? 0.7 : 1}
+                    style={{ backgroundColor: '#ffffff', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}
                   >
-                    <View className="flex-row items-center" style={{ gap: 12 }}>
-                      <View style={{ backgroundColor: (typeData?.color ?? '#7355F7') + '22', borderRadius: 10, padding: 8 }}>
-                        <Ionicons name={typeData?.icon ?? 'document-outline'} size={20} color={typeData?.color ?? '#7355F7'} />
+                    {/* Thumbnail area */}
+                    <View style={{ height: 64, backgroundColor: '#F0EEF9', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                      <Ionicons name={src?.icon ?? 'document-outline'} size={28} color={(src?.color ?? '#9B94CC') + '66'} />
+                      {/* Type badge */}
+                      <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: (src?.color ?? '#9B94CC') + '22', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: (src?.color ?? '#9B94CC') + '40' }}>
+                        <Text style={{ color: src?.color ?? '#9B94CC', fontSize: 10, fontWeight: '700' }}>{src?.label ?? item.type}</Text>
                       </View>
-                      <View className="flex-1">
-                        <Text className="text-text1 font-medium" numberOfLines={1}>{item.title}</Text>
-                        <Text className="text-text3 text-xs mt-0.5">
-                          {new Date(item.createdAt).toLocaleDateString('tr-TR')}
-                        </Text>
-                      </View>
-                      <View style={{ backgroundColor: sc + '22', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 }}>
-                        <Text style={{ color: sc, fontSize: 11, fontWeight: '600' }}>
-                          {STATUS_LABELS[item.status] ?? item.status}
-                        </Text>
+                      {/* Status indicator */}
+                      <View style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: sm.color + '22', alignItems: 'center', justifyContent: 'center' }}>
+                        {item.status === 'PROCESSING'
+                          ? <ActivityIndicator size="small" color={sm.color} style={{ transform: [{ scale: 0.65 }] }} />
+                          : <Ionicons name={sm.icon} size={13} color={sm.color} />
+                        }
                       </View>
                     </View>
-                    {item.status === 'PROCESSING' && (
-                      <View className="mt-2 flex-row items-center" style={{ gap: 6 }}>
-                        <ActivityIndicator size="small" color="#7355F7" />
-                        <Text className="text-text3 text-xs">Analiz ediliyor...</Text>
+
+                    {/* Info */}
+                    <View style={{ padding: 11 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '500', color: '#110D24', lineHeight: 18, marginBottom: 6 }} numberOfLines={2}>{item.title}</Text>
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {item.status === 'DONE' && wc > 0 ? (
+                          <>
+                            <View style={{ backgroundColor: '#F0EEF9', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                              <Ionicons name="book-outline" size={10} color="#9B94CC" />
+                              <Text style={{ color: '#9B94CC', fontSize: 10 }}>{wc} kelime</Text>
+                            </View>
+                            {pc > 0 && (
+                              <View style={{ backgroundColor: '#F0EEF9', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                                <Ionicons name="language-outline" size={10} color="#9B94CC" />
+                                <Text style={{ color: '#9B94CC', fontSize: 10 }}>{pc} kalıp</Text>
+                              </View>
+                            )}
+                          </>
+                        ) : (
+                          <View style={{ backgroundColor: sm.color + '15', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
+                            <Text style={{ color: sm.color, fontSize: 10, fontWeight: '600' }}>{sm.label}</Text>
+                          </View>
+                        )}
+                        <View style={{ backgroundColor: '#F0EEF9', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
+                          <Text style={{ color: '#9B94CC', fontSize: 10 }}>{new Date(item.createdAt).toLocaleDateString('tr-TR')}</Text>
+                        </View>
                       </View>
-                    )}
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -154,31 +209,22 @@ export default function Content() {
         </ScrollView>
       </View>
 
-      <Modal visible={addModal} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: 'rgba(17,13,36,0.7)', justifyContent: 'flex-end' }}>
+      {/* Add Modal */}
+      <Modal visible={addModal} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(17,13,36,0.6)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
-            <Text style={{ color: '#110D24', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>İçerik Ekle</Text>
+            <Text style={{ color: '#110D24', fontSize: 18, fontWeight: '700', marginBottom: 14 }}>İçerik Ekle</Text>
 
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-              {CONTENT_TYPES.map((ct) => (
+            {/* Type selector */}
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
+              {SOURCE_TYPES.map((src) => (
                 <TouchableOpacity
-                  key={ct.type}
-                  onPress={() => { setSelectedType(ct.type); setInputText(''); }}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    gap: 4,
-                    backgroundColor: selectedType === ct.type ? ct.color + '33' : '#F0EEF9',
-                    borderWidth: 1,
-                    borderColor: selectedType === ct.type ? ct.color : '#E4E1F5',
-                  }}
+                  key={src.type}
+                  onPress={() => { setSelectedType(src.type); setInputText(''); }}
+                  style={{ flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center', gap: 3, backgroundColor: selectedType === src.type ? src.color + '22' : '#F0EEF9', borderWidth: 1, borderColor: selectedType === src.type ? src.color : '#E4E1F5' }}
                 >
-                  <Ionicons name={ct.icon} size={18} color={selectedType === ct.type ? ct.color : '#9B94CC'} />
-                  <Text style={{ color: selectedType === ct.type ? ct.color : '#9B94CC', fontSize: 11, fontWeight: '600' }}>
-                    {ct.label}
-                  </Text>
+                  <Ionicons name={src.icon} size={16} color={selectedType === src.type ? src.color : '#9B94CC'} />
+                  <Text style={{ color: selectedType === src.type ? src.color : '#9B94CC', fontSize: 10, fontWeight: '600' }}>{src.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -186,20 +232,11 @@ export default function Content() {
             <TextInput
               value={inputText}
               onChangeText={setInputText}
-              placeholder={CONTENT_TYPES.find((c) => c.type === selectedType)?.placeholder}
+              placeholder={currentSource.placeholder}
               placeholderTextColor="#9B94CC"
-              multiline={selectedType === 'SUBTITLE'}
-              numberOfLines={selectedType === 'SUBTITLE' ? 4 : 1}
-              style={{
-                backgroundColor: '#F0EEF9',
-                borderRadius: 12,
-                padding: 12,
-                color: '#110D24',
-                fontSize: 14,
-                minHeight: selectedType === 'SUBTITLE' ? 100 : 48,
-                marginBottom: 16,
-                textAlignVertical: selectedType === 'SUBTITLE' ? 'top' : 'center',
-              }}
+              multiline={currentSource.multiline}
+              numberOfLines={currentSource.multiline ? 4 : 1}
+              style={{ backgroundColor: '#F0EEF9', borderRadius: 12, padding: 12, color: '#110D24', fontSize: 14, minHeight: currentSource.multiline ? 100 : 48, marginBottom: 16, textAlignVertical: currentSource.multiline ? 'top' : 'center' }}
             />
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -212,11 +249,11 @@ export default function Content() {
               <TouchableOpacity
                 onPress={handleAdd}
                 disabled={!inputText.trim() || addMutation.isPending}
-                style={{ flex: 1, backgroundColor: '#7355F7', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: inputText.trim() ? '#7355F7' : '#E4E1F5', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
               >
                 {addMutation.isPending
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={{ color: '#fff', fontWeight: '600' }}>Analiz Et</Text>
+                  : <Text style={{ color: inputText.trim() ? '#fff' : '#9B94CC', fontWeight: '600' }}>Analiz Et ✨</Text>
                 }
               </TouchableOpacity>
             </View>

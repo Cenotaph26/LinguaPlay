@@ -114,7 +114,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const items = await prisma.contentItem.findMany({
       where: { userId: req.userId },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, type: true, url: true, title: true, status: true, createdAt: true, updatedAt: true },
+      select: { id: true, type: true, url: true, title: true, status: true, createdAt: true, updatedAt: true, _count: { select: { words: true, phrases: true } } },
     });
     res.json(items);
   } catch (err) {
