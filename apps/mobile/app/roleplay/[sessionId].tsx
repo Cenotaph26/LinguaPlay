@@ -21,7 +21,7 @@ function CorrectionBadge({ correction }: { correction: { original: string; sugge
   return (
     <TouchableOpacity
       onPress={() => setExpanded(!expanded)}
-      style={{ marginTop: 6, backgroundColor: '#f59e0b22', borderRadius: 8, padding: 8 }}
+      style={{ marginTop: 6, backgroundColor: 'rgba(245,158,11,0.10)', borderRadius: 8, padding: 8 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <Ionicons name="warning-outline" size={14} color="#f59e0b" />

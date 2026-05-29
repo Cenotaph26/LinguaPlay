@@ -47,7 +47,7 @@ export default function Dashboard() {
               {!user.hasApiKey && (
                 <TouchableOpacity
                   onPress={() => router.push('/(tabs)/profile')}
-                  style={{ backgroundColor: '#f59e0b22', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  style={{ backgroundColor: 'rgba(245,158,11,0.10)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}
                 >
                   <Ionicons name="warning-outline" size={12} color="#f59e0b" />
                   <Text style={{ color: '#f59e0b', fontWeight: '600', fontSize: 12 }}>API anahtarı yok</Text>
