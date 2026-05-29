@@ -11,14 +11,17 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String
-  apiKeyEnc     String?
-  level         Level    @default(UNSET)
-  uiLanguage    String   @default("tr")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  apiKeyEnc      String?
+  level          Level     @default(UNSET)
+  uiLanguage     String    @default("tr")
+  xp             Int       @default(0)
+  streak         Int       @default(0)
+  lastActiveDate DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   words         UserWord[]
   sessions      RolePlaySession[]

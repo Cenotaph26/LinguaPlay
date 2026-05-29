@@ -1,7 +1,6 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
-import { requireApiKey } from '../middleware/apiKey';
 import { claudeService } from '../services/claude.service';
 
 const router = Router();
@@ -37,7 +36,7 @@ router.get('/test', requireAuth, (req: AuthRequest, res: Response) => {
   res.json({ questions });
 });
 
-router.post('/evaluate', requireApiKey, async (req: AuthRequest, res: Response) => {
+router.post('/evaluate', async (req: AuthRequest, res: Response) => {
   try {
     const { answers } = req.body as { answers?: { questionId: number; answer: string }[] };
     if (!answers || !Array.isArray(answers)) {
@@ -45,17 +44,29 @@ router.post('/evaluate', requireApiKey, async (req: AuthRequest, res: Response) 
       return;
     }
 
+    const correct = answers.filter(a => {
+      const q = PLACEMENT_QUESTIONS.find(q => q.id === a.questionId);
+      return q?.correctAnswer === a.answer;
+    }).length;
+
     let result: { level: string; explanation: string; score: number };
-    try {
-      result = await claudeService.evaluatePlacement(req.apiKey!, answers, PLACEMENT_QUESTIONS);
-    } catch {
-      const correct = answers.filter(a => {
-        const q = PLACEMENT_QUESTIONS.find(q => q.id === a.questionId);
-        return q?.correctAnswer === a.answer;
-      }).length;
+
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { apiKeyEnc: true } });
+    if (user?.apiKeyEnc) {
+      try {
+        const { decrypt } = await import('../services/encryption.service');
+        const apiKey = decrypt(user.apiKeyEnc);
+        result = await claudeService.evaluatePlacement(apiKey, answers, PLACEMENT_QUESTIONS);
+      } catch {
+        const pct = correct / PLACEMENT_QUESTIONS.length;
+        const level = pct >= 0.9 ? 'C2' : pct >= 0.8 ? 'C1' : pct >= 0.65 ? 'B2' : pct >= 0.5 ? 'B1' : pct >= 0.35 ? 'A2' : 'A1';
+        result = { level, explanation: `${correct}/${PLACEMENT_QUESTIONS.length} doğru cevap.`, score: correct };
+      }
+    } else {
       const pct = correct / PLACEMENT_QUESTIONS.length;
       const level = pct >= 0.9 ? 'C2' : pct >= 0.8 ? 'C1' : pct >= 0.65 ? 'B2' : pct >= 0.5 ? 'B1' : pct >= 0.35 ? 'A2' : 'A1';
-      result = { level, explanation: `${correct}/${PLACEMENT_QUESTIONS.length} doğru cevap.`, score: correct };
+      const LEVEL_NAMES: Record<string, string> = { A1: 'Başlangıç', A2: 'Temel', B1: 'Orta Altı', B2: 'Orta', C1: 'İleri', C2: 'Ustalık' };
+      result = { level, explanation: `${correct}/${PLACEMENT_QUESTIONS.length} doğru — ${LEVEL_NAMES[level]} seviyesindesiniz.`, score: correct };
     }
 
     const validLevel = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(result.level) ? result.level : 'B1';

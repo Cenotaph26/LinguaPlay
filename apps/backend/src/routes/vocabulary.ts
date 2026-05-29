@@ -75,10 +75,28 @@ router.post('/review', async (req: AuthRequest, res: Response) => {
       uw.repetitions,
     );
 
-    const updated = await prisma.userWord.update({
-      where: { id: userWordId },
-      data: { interval, easeFactor, repetitions, nextReview, status },
-    });
+    const XP_BY_QUALITY = [1, 3, 5, 10];
+    const xpGain = XP_BY_QUALITY[quality as number] ?? 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { xp: true, streak: true, lastActiveDate: true } });
+    const lastDate = user?.lastActiveDate ? new Date(user.lastActiveDate) : null;
+    if (lastDate) lastDate.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    let newStreak = user?.streak ?? 0;
+    let newLastActive = user?.lastActiveDate ?? null;
+    if (!lastDate || lastDate.getTime() < today.getTime()) {
+      newStreak = lastDate?.getTime() === yesterday.getTime() ? newStreak + 1 : 1;
+      newLastActive = today;
+    }
+
+    const [updated] = await Promise.all([
+      prisma.userWord.update({ where: { id: userWordId }, data: { interval, easeFactor, repetitions, nextReview, status } }),
+      prisma.user.update({ where: { id: req.userId }, data: { xp: { increment: xpGain }, streak: newStreak, lastActiveDate: newLastActive } }),
+    ]);
     res.json(updated);
   } catch (err) {
     console.error('[vocabulary/review]', err);
