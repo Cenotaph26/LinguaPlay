@@ -49,6 +49,7 @@ export interface ContentItem {
   title: string;
   status: 'PENDING' | 'PROCESSING' | 'DONE' | 'FAILED';
   createdAt: string;
+  _count?: { words: number; phrases: number };
 }
 
 export interface ContentDetail extends ContentItem {
@@ -76,6 +77,7 @@ export interface RolePlaySession {
   feedback?: string;
   wordsUsed: string[];
   createdAt: string;
+  scene?: { titleTr: string; titleEn: string; category: string } | null;
 }
 
 export interface QuizQuestion {
@@ -112,7 +114,7 @@ export const profileApi = {
   updateSettings: (data: { uiLanguage?: string; level?: string }) =>
     api.put<UserData>('/profile/settings', data),
   getStats: () =>
-    api.get<{ wordCount: number; sessionCount: number; contentCount: number; masteredCount: number }>('/profile/stats'),
+    api.get<{ wordCount: number; sessionCount: number; contentCount: number; masteredCount: number; xp: number; streak: number }>('/profile/stats'),
 };
 
 export const placementApi = {
