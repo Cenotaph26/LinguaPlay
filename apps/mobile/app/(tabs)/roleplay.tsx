@@ -12,14 +12,24 @@ import { useAuthStore } from '../../stores/authStore';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const CATEGORY_ICONS: Record<string, IconName> = {
-  daily: 'cafe-outline',
-  work: 'briefcase-outline',
-  travel: 'airplane-outline',
-  emergency: 'medical-outline',
-  social: 'people-outline',
-  shopping: 'bag-outline',
+const CATEGORY_EMOJI: Record<string, string> = {
+  daily: '☕',
+  work: '💼',
+  travel: '✈️',
+  emergency: '🏥',
+  social: '💬',
+  shopping: '🛍️',
 };
+
+const CATEGORY_FILTERS: Array<{ id: string; label: string; icon: IconName }> = [
+  { id: 'all',       label: 'Tümü',      icon: 'globe-outline' },
+  { id: 'travel',    label: 'Seyahat',   icon: 'airplane-outline' },
+  { id: 'work',      label: 'İş',        icon: 'briefcase-outline' },
+  { id: 'social',    label: 'Sosyal',    icon: 'people-outline' },
+  { id: 'emergency', label: 'Sağlık',    icon: 'medical-outline' },
+  { id: 'daily',     label: 'Günlük',    icon: 'cafe-outline' },
+  { id: 'shopping',  label: 'Alışveriş', icon: 'bag-outline' },
+];
 
 const LEVEL_COLORS: Record<string, string> = {
   A1: '#22c55e', A2: '#22c55e',
@@ -31,6 +41,7 @@ export default function Roleplay() {
   const { user } = useAuthStore();
   const [customModal, setCustomModal] = useState(false);
   const [customScene, setCustomScene] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   const levelUnset = !user?.level || user.level === 'UNSET';
 
@@ -38,6 +49,10 @@ export default function Roleplay() {
     queryKey: ['roleplay-scenes'],
     queryFn: () => roleplayApi.getScenes().then((r) => r.data),
   });
+
+  const filteredScenes = selectedCategory === 'all'
+    ? scenes
+    : (scenes as RolePlayScene[]).filter((s) => s.category === selectedCategory);
 
   const startMutation = useMutation({
     mutationFn: (data: { sceneId?: string; customScene?: string }) =>
@@ -47,146 +62,139 @@ export default function Roleplay() {
       router.push(`/roleplay/${data.session.id}`);
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.error ?? 'Oturum başlatılamadı';
       if (err.response?.status === 402) {
         Alert.alert('API Anahtarı Gerekli', 'Lütfen önce Profil sayfasından Claude API anahtarınızı ekleyin.', [
           { text: 'Profil', onPress: () => router.push('/(tabs)/profile') },
           { text: 'İptal' },
         ]);
       } else {
-        Alert.alert('Hata', msg);
+        Alert.alert('Hata', err.response?.data?.error ?? 'Oturum başlatılamadı');
       }
     },
   });
 
-  const handleStartCustom = () => {
-    if (!customScene.trim()) return;
-    startMutation.mutate({ customScene: customScene.trim() });
-  };
+  function handleStartScene(sceneId: string) {
+    if (levelUnset) {
+      Alert.alert('Seviye Gerekli', 'Konuşma pratiği için önce seviye testini tamamlamalısın.', [
+        { text: 'Teste Git', onPress: () => router.push('/placement') },
+        { text: 'İptal' },
+      ]);
+      return;
+    }
+    startMutation.mutate({ sceneId });
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
       <View style={{ flex: 1 }}>
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View className="py-5">
-          <Text className="text-2xl font-bold text-text1">Konuşma Pratiği</Text>
-          <Text className="text-text3 text-sm mt-1">Gerçek senaryolarla pratik yap</Text>
-        </View>
-
-        {levelUnset && (
-          <TouchableOpacity
-            onPress={() => router.push('/placement')}
-            style={{ backgroundColor: '#f59e0b22', borderColor: '#f59e0b', borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}
-          >
-            <Ionicons name="school-outline" size={20} color="#f59e0b" />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#f59e0b', fontWeight: '600', fontSize: 14 }}>Seviye Belirlenmedi</Text>
-              <Text style={{ color: '#d97706', fontSize: 12, marginTop: 2 }}>Rol yapma için önce seviye testini tamamla →</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          onPress={() => {
-            if (levelUnset) {
-              Alert.alert('Seviye Gerekli', 'Konuşma pratiği için önce seviye testini tamamlamalısın.', [
-                { text: 'Teste Git', onPress: () => router.push('/placement') },
-                { text: 'İptal' },
-              ]);
-              return;
-            }
-            setCustomModal(true);
-          }}
-          className="bg-bg2 border border-border rounded-2xl p-4 flex-row items-center mb-5"
-          style={{ gap: 12 }}
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
         >
-          <View style={{ backgroundColor: '#6366f122', borderRadius: 10, padding: 8 }}>
-            <Ionicons name="add-circle-outline" size={24} color="#6366f1" />
+          <View style={{ paddingTop: 20, paddingBottom: 14 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: '#fafafa' }}>Sahne Seç</Text>
+            <Text style={{ fontSize: 12, color: '#52525b', marginTop: 2 }}>Gerçek hayat senaryolarını pratik yap</Text>
           </View>
-          <View className="flex-1">
-            <Text className="text-text1 font-semibold">Özel Senaryo</Text>
-            <Text className="text-text3 text-sm">Kendi senaryonu tanımla</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color="#71717a" />
-        </TouchableOpacity>
 
-        <Text className="text-text2 text-sm font-medium mb-3">Hazır Sahneler</Text>
+          {levelUnset && (
+            <TouchableOpacity
+              onPress={() => router.push('/placement')}
+              style={{ backgroundColor: 'rgba(245,158,11,0.10)', borderColor: 'rgba(245,158,11,0.25)', borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+            >
+              <Ionicons name="school-outline" size={20} color="#f59e0b" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#f59e0b', fontWeight: '600', fontSize: 13 }}>Seviye Belirlenmedi</Text>
+                <Text style={{ color: '#d97706', fontSize: 11, marginTop: 2 }}>Rol yapma için önce seviye testini tamamla →</Text>
+              </View>
+            </TouchableOpacity>
+          )}
 
-        {isLoading ? (
-          <View className="items-center py-8">
-            <ActivityIndicator color="#6366f1" />
-          </View>
-        ) : (
-          <View style={{ gap: 10, paddingBottom: 24 }}>
-            {scenes.map((scene: RolePlayScene) => {
-              const lc = LEVEL_COLORS[scene.difficulty] ?? '#71717a';
-              const icon = CATEGORY_ICONS[scene.category] ?? 'chatbubble-outline';
-              return (
-                <View
-                  key={scene.id}
-                  className="bg-bg2 border border-border rounded-2xl p-4"
-                >
-                  <View className="flex-row items-center" style={{ gap: 12 }}>
-                    <View className="bg-bg3 rounded-xl p-2">
-                      <Ionicons name={icon} size={22} color="#a1a1aa" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-text1 font-medium">{scene.titleTr}</Text>
-                      <Text className="text-text3 text-sm">{scene.titleEn}</Text>
-                    </View>
-                    <View style={{
-                      backgroundColor: lc + '22',
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 20,
-                    }}>
-                      <Text style={{ color: lc, fontSize: 11, fontWeight: '600' }}>{scene.difficulty}</Text>
-                    </View>
-                  </View>
-                  <Text className="text-text3 text-sm mt-2 mb-3">{scene.descriptionTr}</Text>
+          <TouchableOpacity
+            onPress={() => {
+              if (levelUnset) {
+                Alert.alert('Seviye Gerekli', 'Konuşma pratiği için önce seviye testini tamamlamalısın.', [
+                  { text: 'Teste Git', onPress: () => router.push('/placement') },
+                  { text: 'İptal' },
+                ]);
+                return;
+              }
+              setCustomModal(true);
+            }}
+            style={{ marginBottom: 14, backgroundColor: '#27272a', borderWidth: 1, borderColor: '#3f3f46', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(99,102,241,0.12)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.30)', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="sparkles-outline" size={18} color="#818cf8" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#fafafa', fontWeight: '500', fontSize: 13 }}>Kendi sahneni yaz</Text>
+              <Text style={{ color: '#52525b', fontSize: 11, marginTop: 2 }}>AI senaryona göre canlandırır</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={17} color="#52525b" />
+          </TouchableOpacity>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {CATEGORY_FILTERS.map((cat) => {
+                const active = selectedCategory === cat.id;
+                return (
                   <TouchableOpacity
-                    onPress={() => {
-                      if (levelUnset) {
-                        Alert.alert('Seviye Gerekli', 'Konuşma pratiği için önce seviye testini tamamlamalısın.', [
-                          { text: 'Teste Git', onPress: () => router.push('/placement') },
-                          { text: 'İptal' },
-                        ]);
-                        return;
-                      }
-                      startMutation.mutate({ sceneId: scene.id });
-                    }}
-                    disabled={startMutation.isPending}
-                    style={{
-                      backgroundColor: '#6366f1',
-                      borderRadius: 10,
-                      paddingVertical: 10,
-                      alignItems: 'center',
-                    }}
+                    key={cat.id}
+                    onPress={() => setSelectedCategory(cat.id)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, backgroundColor: active ? 'rgba(99,102,241,0.12)' : '#27272a', borderColor: active ? 'rgba(99,102,241,0.30)' : '#3f3f46' }}
                   >
-                    {startMutation.isPending ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Başla</Text>
-                    )}
+                    <Ionicons name={cat.icon} size={14} color={active ? '#818cf8' : '#a1a1aa'} />
+                    <Text style={{ color: active ? '#818cf8' : '#a1a1aa', fontSize: 12, fontWeight: '500' }}>{cat.label}</Text>
                   </TouchableOpacity>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
+                );
+              })}
+            </View>
+          </ScrollView>
+
+          <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#52525b', marginBottom: 8 }}>
+            Hazır Sahneler
+          </Text>
+
+          {isLoading ? (
+            <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+              <ActivityIndicator color="#6366f1" />
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {(filteredScenes as RolePlayScene[]).map((scene) => {
+                const lc = LEVEL_COLORS[scene.difficulty] ?? '#71717a';
+                const emoji = CATEGORY_EMOJI[scene.category] ?? '💬';
+                const isPending = startMutation.isPending && (startMutation.variables as any)?.sceneId === scene.id;
+                return (
+                  <TouchableOpacity
+                    key={scene.id}
+                    onPress={() => handleStartScene(scene.id)}
+                    disabled={startMutation.isPending}
+                    style={{ width: '48.5%', backgroundColor: '#27272a', borderWidth: 1, borderColor: '#3f3f46', borderRadius: 14, padding: 14 }}
+                  >
+                    {isPending ? (
+                      <View style={{ height: 22, marginBottom: 8, justifyContent: 'center' }}>
+                        <ActivityIndicator size="small" color="#6366f1" />
+                      </View>
+                    ) : (
+                      <Text style={{ fontSize: 22, marginBottom: 8 }}>{emoji}</Text>
+                    )}
+                    <Text style={{ fontSize: 13, fontWeight: '500', color: '#fafafa', lineHeight: 18, marginBottom: 7 }}>{scene.titleTr}</Text>
+                    <View style={{ backgroundColor: lc + '1a', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', borderWidth: 1, borderColor: lc + '40' }}>
+                      <Text style={{ color: lc, fontSize: 10, fontWeight: '600' }}>{scene.difficulty}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
       </View>
 
       <Modal visible={customModal} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: '#000000aa', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: '#18181b', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
             <Text style={{ color: '#fafafa', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>Özel Senaryo</Text>
-            <Text style={{ color: '#71717a', fontSize: 14, marginBottom: 16 }}>
-              Senaryonu Türkçe veya İngilizce anlat
-            </Text>
+            <Text style={{ color: '#71717a', fontSize: 14, marginBottom: 16 }}>Senaryonu Türkçe veya İngilizce anlat</Text>
             <TextInput
               value={customScene}
               onChangeText={setCustomScene}
@@ -194,16 +202,7 @@ export default function Roleplay() {
               placeholderTextColor="#52525b"
               multiline
               numberOfLines={4}
-              style={{
-                backgroundColor: '#27272a',
-                borderRadius: 12,
-                padding: 12,
-                color: '#fafafa',
-                fontSize: 14,
-                minHeight: 100,
-                marginBottom: 16,
-                textAlignVertical: 'top',
-              }}
+              style={{ backgroundColor: '#27272a', borderRadius: 12, padding: 12, color: '#fafafa', fontSize: 14, minHeight: 100, marginBottom: 16, textAlignVertical: 'top' }}
             />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
@@ -213,7 +212,7 @@ export default function Roleplay() {
                 <Text style={{ color: '#a1a1aa', fontWeight: '600' }}>İptal</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={handleStartCustom}
+                onPress={() => { if (customScene.trim()) startMutation.mutate({ customScene: customScene.trim() }); }}
                 disabled={!customScene.trim() || startMutation.isPending}
                 style={{ flex: 1, backgroundColor: '#6366f1', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
               >

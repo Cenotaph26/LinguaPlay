@@ -35,7 +35,8 @@ export default function Dashboard() {
   return (
     <SafeAreaView className="flex-1 bg-bg">
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-        <View className="py-6">
+        <View className="py-6" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1 }}>
           <Text className="text-text3 text-sm">Hoş geldin</Text>
           <Text className="text-2xl font-bold text-text1">{user?.email?.split('@')[0] ?? 'Öğrenci'}</Text>
           {user?.level && user.level !== 'UNSET' && (
@@ -64,6 +65,12 @@ export default function Dashboard() {
               <Ionicons name="chevron-forward" size={16} color="#fff" style={{ marginLeft: 'auto' }} />
             </TouchableOpacity>
           )}
+          </View>
+          <View style={{ backgroundColor: '#6366f1', borderRadius: 9999, width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+              {(user?.email ?? 'U').slice(0, 1).toUpperCase()}
+            </Text>
+          </View>
         </View>
 
         {dueCount > 0 && (

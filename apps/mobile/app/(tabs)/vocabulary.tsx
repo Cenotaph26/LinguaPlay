@@ -112,34 +112,28 @@ export default function Vocabulary() {
               </Text>
             </View>
           ) : (
-            <View style={{ gap: 8, paddingBottom: 24 }}>
+            <View style={{ gap: 6, paddingBottom: 24 }}>
               {words.map((item) => {
                 const status = item.userWord?.status ?? 'NEW';
                 const sc = STATUS_COLORS[status] ?? '#71717a';
+                const nextReview = item.userWord?.nextReview;
+                const reviewLabel = status === 'MASTERED' ? 'Tamam' : status === 'NEW' ? 'Yeni' : nextReview ? (() => {
+                  const days = Math.ceil((new Date(nextReview).getTime() - Date.now()) / 86400000);
+                  return days <= 0 ? 'Bugün' : days === 1 ? 'Yarın' : `${days} gün`;
+                })() : '';
                 return (
                   <View
                     key={item.id}
-                    className="bg-bg2 border border-border rounded-xl p-4 flex-row items-center"
-                    style={{ gap: 12 }}
+                    style={{ backgroundColor: '#27272a', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', borderRadius: 12, paddingVertical: 11, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 12 }}
                   >
-                    <View className="flex-1">
-                      <Text className="text-text1 font-medium">{item.word}</Text>
-                      <Text className="text-text3 text-sm" numberOfLines={1}>
+                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: sc, flexShrink: 0 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '500', color: '#fafafa' }}>{item.word}</Text>
+                      <Text style={{ fontSize: 12, color: '#52525b' }} numberOfLines={1}>
                         {item.definitionTr || item.definition}
                       </Text>
                     </View>
-                    <View
-                      style={{
-                        backgroundColor: sc + '22',
-                        paddingHorizontal: 8,
-                        paddingVertical: 3,
-                        borderRadius: 20,
-                      }}
-                    >
-                      <Text style={{ color: sc, fontSize: 11, fontWeight: '600' }}>
-                        {STATUS_LABELS[status] ?? status}
-                      </Text>
-                    </View>
+                    <Text style={{ fontSize: 10, color: '#52525b', textAlign: 'right' }}>{reviewLabel}</Text>
                   </View>
                 );
               })}
