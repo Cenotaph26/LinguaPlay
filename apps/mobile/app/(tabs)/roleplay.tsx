@@ -42,8 +42,9 @@ export default function Roleplay() {
   const [customModal, setCustomModal] = useState(false);
   const [customScene, setCustomScene] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sceneModal, setSceneModal] = useState<RolePlayScene | null>(null);
 
-  const levelUnset = !user?.level || user.level === 'UNSET';
+  const hasApiKey = user?.hasApiKey ?? false;
 
   const { data: scenes = [], isLoading } = useQuery({
     queryKey: ['roleplay-scenes'],
@@ -59,11 +60,12 @@ export default function Roleplay() {
       roleplayApi.startSession(data).then((r) => r.data),
     onSuccess: (data) => {
       setCustomModal(false);
+      setSceneModal(null);
       router.push(`/roleplay/${data.session.id}`);
     },
     onError: (err: any) => {
       if (err.response?.status === 402) {
-        Alert.alert('API Anahtarı Gerekli', 'Lütfen önce Profil sayfasından Claude API anahtarınızı ekleyin.', [
+        Alert.alert('API Anahtarı Gerekli', 'Lütfen önce Profil sayfasından API anahtarınızı ekleyin.', [
           { text: 'Profil', onPress: () => router.push('/(tabs)/profile') },
           { text: 'İptal' },
         ]);
@@ -73,15 +75,26 @@ export default function Roleplay() {
     },
   });
 
-  function handleStartScene(sceneId: string) {
-    if (levelUnset) {
-      Alert.alert('Seviye Gerekli', 'Konuşma pratiği için önce seviye testini tamamlamalısın.', [
-        { text: 'Teste Git', onPress: () => router.push('/placement') },
+  function handleScenePress(scene: RolePlayScene) {
+    setSceneModal(scene);
+  }
+
+  function handleStartAI() {
+    if (!sceneModal) return;
+    if (!user?.level || user.level === 'UNSET') {
+      Alert.alert('Seviye Gerekli', 'AI konuşma pratiği için önce seviye testini tamamlamalısın.', [
+        { text: 'Teste Git', onPress: () => { setSceneModal(null); router.push('/placement'); } },
         { text: 'İptal' },
       ]);
       return;
     }
-    startMutation.mutate({ sceneId });
+    startMutation.mutate({ sceneId: sceneModal.id });
+  }
+
+  function handleReadStatic() {
+    if (!sceneModal) return;
+    setSceneModal(null);
+    router.push(`/roleplay/static/${sceneModal.id}`);
   }
 
   return (
@@ -96,30 +109,9 @@ export default function Roleplay() {
             <Text style={{ fontSize: 12, color: '#9B94CC', marginTop: 2 }}>Gerçek hayat senaryolarını pratik yap</Text>
           </View>
 
-          {levelUnset && (
-            <TouchableOpacity
-              onPress={() => router.push('/placement')}
-              style={{ backgroundColor: 'rgba(245,158,11,0.10)', borderColor: 'rgba(245,158,11,0.25)', borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}
-            >
-              <Ionicons name="school-outline" size={20} color="#f59e0b" />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#f59e0b', fontWeight: '600', fontSize: 13 }}>Seviye Belirlenmedi</Text>
-                <Text style={{ color: '#d97706', fontSize: 11, marginTop: 2 }}>Rol yapma için önce seviye testini tamamla →</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-
+          {/* Custom scene */}
           <TouchableOpacity
-            onPress={() => {
-              if (levelUnset) {
-                Alert.alert('Seviye Gerekli', 'Konuşma pratiği için önce seviye testini tamamlamalısın.', [
-                  { text: 'Teste Git', onPress: () => router.push('/placement') },
-                  { text: 'İptal' },
-                ]);
-                return;
-              }
-              setCustomModal(true);
-            }}
+            onPress={() => setCustomModal(true)}
             style={{ marginBottom: 14, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
           >
             <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(115,85,247,0.08)', borderWidth: 1, borderColor: 'rgba(115,85,247,0.25)', alignItems: 'center', justifyContent: 'center' }}>
@@ -127,11 +119,12 @@ export default function Roleplay() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: '#110D24', fontWeight: '500', fontSize: 13 }}>Kendi sahneni yaz</Text>
-              <Text style={{ color: '#9B94CC', fontSize: 11, marginTop: 2 }}>AI senaryona göre canlandırır</Text>
+              <Text style={{ color: '#9B94CC', fontSize: 11, marginTop: 2 }}>AI senaryona göre canlandırır ✨</Text>
             </View>
             <Ionicons name="chevron-forward" size={17} color="#9B94CC" />
           </TouchableOpacity>
 
+          {/* Category filters */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
             <View style={{ flexDirection: 'row', gap: 6 }}>
               {CATEGORY_FILTERS.map((cat) => {
@@ -163,24 +156,28 @@ export default function Roleplay() {
               {(filteredScenes as RolePlayScene[]).map((scene) => {
                 const lc = LEVEL_COLORS[scene.difficulty] ?? '#9B94CC';
                 const emoji = CATEGORY_EMOJI[scene.category] ?? '💬';
-                const isPending = startMutation.isPending && (startMutation.variables as any)?.sceneId === scene.id;
                 return (
                   <TouchableOpacity
                     key={scene.id}
-                    onPress={() => handleStartScene(scene.id)}
-                    disabled={startMutation.isPending}
+                    onPress={() => handleScenePress(scene)}
                     style={{ width: '48.5%', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 14, padding: 14, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
                   >
-                    {isPending ? (
-                      <View style={{ height: 22, marginBottom: 8, justifyContent: 'center' }}>
-                        <ActivityIndicator size="small" color="#7355F7" />
+                    <Text style={{ fontSize: 22, marginBottom: 8 }}>{emoji}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#110D24', lineHeight: 18, marginBottom: 8, flex: 1 }}>{scene.titleTr}</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ backgroundColor: lc + '1a', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: lc + '40' }}>
+                        <Text style={{ color: lc, fontSize: 10, fontWeight: '600' }}>{scene.difficulty}</Text>
                       </View>
-                    ) : (
-                      <Text style={{ fontSize: 22, marginBottom: 8 }}>{emoji}</Text>
-                    )}
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: '#110D24', lineHeight: 18, marginBottom: 7 }}>{scene.titleTr}</Text>
-                    <View style={{ backgroundColor: lc + '1a', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', borderWidth: 1, borderColor: lc + '40' }}>
-                      <Text style={{ color: lc, fontSize: 10, fontWeight: '600' }}>{scene.difficulty}</Text>
+                      <View style={{ flexDirection: 'row', gap: 4 }}>
+                        <View style={{ backgroundColor: '#F0EEF9', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3 }}>
+                          <Text style={{ color: '#6B638F', fontSize: 10, fontWeight: '600' }}>Oku</Text>
+                        </View>
+                        {hasApiKey && (
+                          <View style={{ backgroundColor: 'rgba(115,85,247,0.10)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3 }}>
+                            <Text style={{ color: '#7355F7', fontSize: 10, fontWeight: '600' }}>AI ✨</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   </TouchableOpacity>
                 );
@@ -190,6 +187,75 @@ export default function Roleplay() {
         </ScrollView>
       </View>
 
+      {/* Scene Mode Modal */}
+      <Modal visible={!!sceneModal} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(17,13,36,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+            {sceneModal && (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <Text style={{ fontSize: 32 }}>{CATEGORY_EMOJI[sceneModal.category] ?? '💬'}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#110D24', fontSize: 17, fontWeight: '700' }}>{sceneModal.titleTr}</Text>
+                    <Text style={{ color: '#9B94CC', fontSize: 12, marginTop: 2 }}>{sceneModal.descriptionTr}</Text>
+                  </View>
+                </View>
+
+                <Text style={{ color: '#6B638F', fontSize: 13, marginBottom: 16 }}>Nasıl pratik yapmak istersin?</Text>
+
+                <TouchableOpacity
+                  onPress={handleReadStatic}
+                  style={{ backgroundColor: '#F0EEF9', borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+                >
+                  <View style={{ backgroundColor: '#E4E1F5', borderRadius: 10, padding: 8 }}>
+                    <Ionicons name="book-outline" size={20} color="#6B638F" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 15 }}>Diyalog Oku</Text>
+                    <Text style={{ color: '#9B94CC', fontSize: 12, marginTop: 1 }}>Hazır diyalogu oku, kelime öğren</Text>
+                  </View>
+                  <View style={{ backgroundColor: '#E4E1F5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ color: '#6B638F', fontSize: 10, fontWeight: '600' }}>ÜCRETSİZ</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleStartAI}
+                  disabled={startMutation.isPending}
+                  style={{ backgroundColor: hasApiKey ? '#7355F7' : '#F0EEF9', borderRadius: 14, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+                >
+                  <View style={{ backgroundColor: hasApiKey ? 'rgba(255,255,255,0.2)' : '#E4E1F5', borderRadius: 10, padding: 8 }}>
+                    {startMutation.isPending
+                      ? <ActivityIndicator size="small" color={hasApiKey ? '#fff' : '#6B638F'} />
+                      : <Ionicons name="chatbubbles-outline" size={20} color={hasApiKey ? '#fff' : '#6B638F'} />
+                    }
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: hasApiKey ? '#fff' : '#110D24', fontWeight: '600', fontSize: 15 }}>AI ile Konuş</Text>
+                    <Text style={{ color: hasApiKey ? 'rgba(255,255,255,0.75)' : '#9B94CC', fontSize: 12, marginTop: 1 }}>
+                      {hasApiKey ? 'Canlı AI ile pratik yap' : 'API key gerekli'}
+                    </Text>
+                  </View>
+                  {!hasApiKey && (
+                    <View style={{ backgroundColor: 'rgba(115,85,247,0.10)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ color: '#7355F7', fontSize: 10, fontWeight: '600' }}>✨ KEY</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setSceneModal(null)}
+                  style={{ alignItems: 'center', paddingVertical: 8 }}
+                >
+                  <Text style={{ color: '#9B94CC', fontWeight: '500' }}>İptal</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Custom Scene Modal */}
       <Modal visible={customModal} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(17,13,36,0.7)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
@@ -218,7 +284,7 @@ export default function Roleplay() {
               >
                 {startMutation.isPending
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={{ color: '#fff', fontWeight: '600' }}>Başla</Text>
+                  : <Text style={{ color: '#fff', fontWeight: '600' }}>Başla ✨</Text>
                 }
               </TouchableOpacity>
             </View>

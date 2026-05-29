@@ -9,6 +9,8 @@ export interface UserData {
   level: string;
   uiLanguage: string;
   hasApiKey: boolean;
+  xp?: number;
+  streak?: number;
 }
 
 export interface Word {

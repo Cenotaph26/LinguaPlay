@@ -58,13 +58,14 @@ router.put('/settings', async (req: AuthRequest, res: Response) => {
 
 router.get('/stats', async (req: AuthRequest, res: Response) => {
   try {
-    const [wordCount, sessionCount, contentCount, masteredCount] = await Promise.all([
+    const [wordCount, sessionCount, contentCount, masteredCount, user] = await Promise.all([
       prisma.userWord.count({ where: { userId: req.userId } }),
       prisma.rolePlaySession.count({ where: { userId: req.userId } }),
       prisma.contentItem.count({ where: { userId: req.userId, status: 'DONE' } }),
       prisma.userWord.count({ where: { userId: req.userId, status: 'MASTERED' } }),
+      prisma.user.findUnique({ where: { id: req.userId }, select: { xp: true, streak: true } }),
     ]);
-    res.json({ wordCount, sessionCount, contentCount, masteredCount });
+    res.json({ wordCount, sessionCount, contentCount, masteredCount, xp: user?.xp ?? 0, streak: user?.streak ?? 0 });
   } catch (err) {
     console.error('[profile/stats]', err);
     res.status(500).json({ error: 'İstatistikler alınamadı' });
