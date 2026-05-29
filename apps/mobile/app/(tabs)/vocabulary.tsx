@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Pressable, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,9 +24,9 @@ const STATUS_COLORS: Record<string, string> = {
 
 const FILTER_OPTS = [
   { label: 'Tümü', value: '' },
+  { label: 'Bugün', value: 'TODAY' },
   { label: 'Öğreniliyor', value: 'LEARNING' },
-  { label: 'Tekrar', value: 'REVIEW' },
-  { label: 'Ustalaşıldı', value: 'MASTERED' },
+  { label: 'Tamamlandı', value: 'MASTERED' },
 ];
 
 interface ExplainData {
@@ -43,6 +43,8 @@ export default function Vocabulary() {
   const [reviewedCount, setReviewedCount] = useState(0);
   const [doneToday, setDoneToday] = useState(false);
   const [listFilter, setListFilter] = useState('');
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedWord, setSelectedWord] = useState<UserWord | null>(null);
   const [explainData, setExplainData] = useState<ExplainData | null>(null);
   const [explainLoading, setExplainLoading] = useState(false);
@@ -55,8 +57,8 @@ export default function Vocabulary() {
   });
 
   const { data: wordsData, isLoading: listLoading } = useQuery({
-    queryKey: ['vocabulary-words', listFilter],
-    queryFn: () => vocabularyApi.getWords(listFilter ? { status: listFilter } : {}).then((r) => r.data),
+    queryKey: ['vocabulary-words', listFilter === 'TODAY' ? '' : listFilter],
+    queryFn: () => vocabularyApi.getWords(listFilter && listFilter !== 'TODAY' ? { status: listFilter } : {}).then((r) => r.data),
     staleTime: 30000,
   });
 
@@ -71,7 +73,12 @@ export default function Vocabulary() {
   });
 
   const dueItems: UserWord[] = Array.isArray(dueData) ? dueData : [];
-  const listWords: UserWord[] = wordsData?.words ?? [];
+  const allListWords: UserWord[] = wordsData?.words ?? [];
+  const dueIds = new Set(dueItems.map((w) => w.id));
+  const filteredByToday = listFilter === 'TODAY' ? allListWords.filter((w) => dueIds.has(w.id)) : allListWords;
+  const listWords: UserWord[] = searchQuery.trim()
+    ? filteredByToday.filter((w) => w.word.toLowerCase().includes(searchQuery.toLowerCase()) || w.definitionTr.toLowerCase().includes(searchQuery.toLowerCase()))
+    : filteredByToday;
   const dueCount = dueItems.length;
   const current = dueItems[cardIndex];
 
@@ -213,12 +220,30 @@ export default function Vocabulary() {
         <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ fontSize: 20, fontWeight: '700', color: '#110D24' }}>Kelimeler</Text>
-            {dueCount > 0 && tab === 'list' && (
-              <View style={{ backgroundColor: 'rgba(115,85,247,0.10)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 }}>
-                <Text style={{ color: '#7355F7', fontSize: 12, fontWeight: '700' }}>{dueCount} bekliyor</Text>
-              </View>
-            )}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              {dueCount > 0 && tab === 'list' && (
+                <View style={{ backgroundColor: 'rgba(115,85,247,0.10)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 }}>
+                  <Text style={{ color: '#7355F7', fontSize: 12, fontWeight: '700' }}>{dueCount} bekliyor</Text>
+                </View>
+              )}
+              <TouchableOpacity onPress={() => { setSearchVisible((v) => !v); setSearchQuery(''); }}>
+                <Ionicons name={searchVisible ? 'close-outline' : 'search-outline'} size={22} color="#6B638F" />
+              </TouchableOpacity>
+            </View>
           </View>
+          {searchVisible && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0EEF9', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginTop: 10, gap: 8 }}>
+              <Ionicons name="search-outline" size={16} color="#9B94CC" />
+              <TextInput
+                style={{ flex: 1, color: '#110D24', fontSize: 14 }}
+                placeholder="Kelime ara..."
+                placeholderTextColor="#9B94CC"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+              />
+            </View>
+          )}
 
           {/* Tab switcher */}
           <View style={{ flexDirection: 'row', backgroundColor: '#F0EEF9', borderRadius: 10, padding: 3, marginTop: 14 }}>
@@ -361,21 +386,24 @@ export default function Vocabulary() {
               {/* Filter chips */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
                 <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {FILTER_OPTS.map((f) => (
-                    <TouchableOpacity
-                      key={f.value}
-                      onPress={() => setListFilter(f.value)}
-                      style={{
-                        paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
-                        backgroundColor: listFilter === f.value ? 'rgba(115,85,247,0.08)' : '#ffffff',
-                        borderWidth: 1, borderColor: listFilter === f.value ? 'rgba(115,85,247,0.25)' : '#E4E1F5',
-                      }}
-                    >
-                      <Text style={{ color: listFilter === f.value ? '#7355F7' : '#9B94CC', fontSize: 12, fontWeight: '600' }}>
-                        {f.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {FILTER_OPTS.map((f) => {
+                    const chipLabel = f.value === 'TODAY' && dueCount > 0 ? `${f.label} (${dueCount})` : f.label;
+                    return (
+                      <TouchableOpacity
+                        key={f.value}
+                        onPress={() => setListFilter(f.value)}
+                        style={{
+                          paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
+                          backgroundColor: listFilter === f.value ? 'rgba(115,85,247,0.08)' : '#ffffff',
+                          borderWidth: 1, borderColor: listFilter === f.value ? 'rgba(115,85,247,0.25)' : '#E4E1F5',
+                        }}
+                      >
+                        <Text style={{ color: listFilter === f.value ? '#7355F7' : '#9B94CC', fontSize: 12, fontWeight: '600' }}>
+                          {chipLabel}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </ScrollView>
 

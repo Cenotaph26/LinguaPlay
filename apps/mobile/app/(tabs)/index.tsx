@@ -142,15 +142,13 @@ export default function Dashboard() {
         {/* Stats */}
         <View className="flex-row mb-5" style={{ gap: 8 }}>
           {[
-            { label: 'Kelime', value: stats?.wordCount ?? 0, icon: 'book-outline' as IconName, color: '#7355F7' },
-            { label: 'Seans', value: stats?.sessionCount ?? 0, icon: 'chatbubbles-outline' as IconName, color: '#7355F7' },
-            { label: 'İçerik', value: stats?.contentCount ?? 0, icon: 'film-outline' as IconName, color: '#F59E0B' },
-            { label: 'Ustalaşıldı', value: stats?.masteredCount ?? 0, icon: 'checkmark-circle-outline' as IconName, color: '#0E9E80' },
+            { label: 'Gün Serisi', value: streak, icon: 'flame-outline' as IconName, color: '#F59E0B' },
+            { label: 'Kelime öğrenildi', value: stats?.wordCount ?? 0, icon: 'book-outline' as IconName, color: '#0E9E80' },
           ].map((stat) => (
-            <View key={stat.label} className="flex-1 bg-bg2 border border-border rounded-xl p-3 items-center">
-              <Ionicons name={stat.icon} size={16} color={stat.color} />
-              <Text className="text-text1 font-bold text-base mt-1">{stat.value}</Text>
-              <Text className="text-text3" style={{ fontSize: 10, marginTop: 1 }}>{stat.label}</Text>
+            <View key={stat.label} style={{ flex: 1, backgroundColor: '#ffffff', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
+              <Ionicons name={stat.icon} size={20} color={stat.color} style={{ marginBottom: 6 }} />
+              <Text style={{ color: '#110D24', fontWeight: '700', fontSize: 26 }}>{stat.value}</Text>
+              <Text style={{ color: '#9B94CC', fontSize: 11, marginTop: 2 }}>{stat.label}</Text>
             </View>
           ))}
         </View>
