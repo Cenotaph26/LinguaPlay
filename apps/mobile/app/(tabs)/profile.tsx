@@ -39,6 +39,7 @@ export default function Profile() {
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [savingKey, setSavingKey] = useState(false);
+  const [testingKey, setTestingKey] = useState(false);
   const [deletingKey, setDeletingKey] = useState(false);
   const [editingKey, setEditingKey] = useState(false);
   const [changingLang, setChangingLang] = useState(false);
@@ -56,6 +57,23 @@ export default function Profile() {
   const displayName = user?.email?.split('@')[0] ?? '—';
   const streak = stats?.streak ?? 0;
   const xp = stats?.xp ?? 0;
+
+  async function handleTestApiKey() {
+    if (!apiKey.trim()) return;
+    setTestingKey(true);
+    try {
+      const { data } = await profileApi.testApiKey(apiKey.trim());
+      if (data.valid) {
+        Alert.alert('Bağlantı Başarılı', 'API anahtarı geçerli. Kaydedebilirsiniz.');
+      } else {
+        Alert.alert('Geçersiz Anahtar', data.error ?? 'API anahtarı doğrulanamadı.');
+      }
+    } catch {
+      Alert.alert('Hata', 'Test sırasında hata oluştu.');
+    } finally {
+      setTestingKey(false);
+    }
+  }
 
   async function handleSaveApiKey() {
     if (!apiKey.trim()) return;
@@ -171,7 +189,7 @@ export default function Profile() {
 
             {(!hasApiKey || editingKey) ? (
               <>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <View style={{ flex: 1, backgroundColor: '#F0EEF9', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center' }}>
                     <TextInput
                       style={{ flex: 1, color: '#110D24', fontSize: 13 }}
@@ -187,10 +205,22 @@ export default function Profile() {
                       <Ionicons name={showKey ? 'eye-off-outline' : 'eye-outline'} size={16} color="#9B94CC" />
                     </TouchableOpacity>
                   </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={handleTestApiKey}
+                    disabled={testingKey || apiKey.trim().length < 20}
+                    style={{ flex: 1, backgroundColor: '#F0EEF9', borderRadius: 8, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: apiKey.trim().length >= 20 ? '#7355F7' : '#E4E1F5' }}
+                  >
+                    {testingKey
+                      ? <ActivityIndicator color="#7355F7" size="small" />
+                      : <Text style={{ color: apiKey.trim().length >= 20 ? '#7355F7' : '#9B94CC', fontWeight: '600', fontSize: 13 }}>Test Et</Text>
+                    }
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleSaveApiKey}
                     disabled={savingKey || apiKey.trim().length < 20}
-                    style={{ backgroundColor: apiKey.trim().length >= 20 ? '#7355F7' : '#E4E1F5', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10 }}
+                    style={{ flex: 1, backgroundColor: apiKey.trim().length >= 20 ? '#7355F7' : '#E4E1F5', borderRadius: 8, paddingVertical: 10, alignItems: 'center' }}
                   >
                     {savingKey
                       ? <ActivityIndicator color="#fff" size="small" />

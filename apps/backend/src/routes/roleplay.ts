@@ -189,9 +189,25 @@ router.post('/sessions/:id/message', requireApiKey, async (req: AuthRequest, res
     }));
     apiMessages.push({ role: 'user', content: content.trim() });
 
-    const reply = await claudeService.chat(req.apiKey!, apiMessages, systemPrompt);
-    const replyText = reply.content[0].type === 'text' ? reply.content[0].text : '';
-    const { displayText, correction, newWords } = parseRoleplayMessage(replyText);
+    // SSE streaming response
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    let fullText = '';
+    const stream = claudeService.chatStream(req.apiKey!, apiMessages, systemPrompt);
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        const text = (event.delta as any).text as string;
+        fullText += text;
+        res.write(`data: ${JSON.stringify({ type: 'token', text })}\n\n`);
+      }
+    }
+
+    const { displayText, correction, newWords } = parseRoleplayMessage(fullText);
 
     const updatedMessages = [
       ...history,
@@ -207,10 +223,16 @@ router.post('/sessions/:id/message', requireApiKey, async (req: AuthRequest, res
       data: { messages: updatedMessages, wordsUsed: allWords },
     });
 
-    res.json({ reply: displayText, correction, newWords });
+    res.write(`data: ${JSON.stringify({ type: 'done', displayText, correction, newWords })}\n\n`);
+    res.end();
   } catch (err) {
     console.error('[roleplay/message]', err);
-    res.status(500).json({ error: 'Mesaj gönderilemedi' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Mesaj gönderilemedi' });
+    } else {
+      res.write(`data: ${JSON.stringify({ type: 'error', error: 'Mesaj gönderilemedi' })}\n\n`);
+      res.end();
+    }
   }
 });
 
@@ -225,6 +247,24 @@ router.post('/sessions/:id/end', requireApiKey, async (req: AuthRequest, res: Re
     const feedback = await claudeService.sessionFeedback(req.apiKey!, messages, user?.level ?? 'B1');
 
     await prisma.rolePlaySession.update({ where: { id }, data: { feedback: JSON.stringify(feedback) } });
+
+    // Auto-add encountered words to user's vocabulary
+    const wordsUsed = (session.wordsUsed ?? []) as string[];
+    if (wordsUsed.length > 0) {
+      const dbWords = await prisma.word.findMany({
+        where: { word: { in: wordsUsed.map((w) => w.toLowerCase()) } },
+      });
+      await Promise.all(
+        dbWords.map((dbWord) =>
+          prisma.userWord.upsert({
+            where: { userId_wordId: { userId: req.userId, wordId: dbWord.id } },
+            create: { userId: req.userId, wordId: dbWord.id },
+            update: {},
+          })
+        )
+      );
+    }
+
     res.json(feedback);
   } catch (err) {
     console.error('[roleplay/end]', err);

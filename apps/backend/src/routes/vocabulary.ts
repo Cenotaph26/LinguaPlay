@@ -150,6 +150,19 @@ router.post('/save', async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.post('/explain', requireApiKey, async (req: AuthRequest, res: Response) => {
+  try {
+    const { word, context = '' } = req.body as { word?: string; context?: string };
+    if (!word) { res.status(400).json({ error: 'word gerekli' }); return; }
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { level: true } });
+    const explanation = await claudeService.explainWord(req.apiKey!, word.trim(), context, user?.level ?? 'B1');
+    res.json({ ...explanation, word: word.trim() });
+  } catch (err) {
+    console.error('[vocabulary/explain POST]', err);
+    res.status(500).json({ error: 'Açıklama alınamadı' });
+  }
+});
+
 router.get('/:wordId/explain', requireApiKey, async (req: AuthRequest, res: Response) => {
   try {
     const { wordId } = req.params;

@@ -1,10 +1,35 @@
 import { Router, Response } from 'express';
+import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { encrypt } from '../services/encryption.service';
 
 const router = Router();
 router.use(requireAuth);
+
+router.post('/apikey/test', async (req: AuthRequest, res: Response) => {
+  try {
+    const { apiKey } = req.body as { apiKey?: string };
+    if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 20) {
+      res.json({ valid: false, error: 'Geçersiz API anahtarı' });
+      return;
+    }
+    const client = new Anthropic({ apiKey: apiKey.trim() });
+    await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 10,
+      messages: [{ role: 'user', content: 'Hi' }],
+    });
+    res.json({ valid: true });
+  } catch (err: any) {
+    const status = err?.status ?? err?.statusCode;
+    if (status === 401 || status === 403) {
+      res.json({ valid: false, error: 'Geçersiz API anahtarı' });
+    } else {
+      res.json({ valid: false, error: 'Bağlantı hatası: ' + (err?.message ?? 'Bilinmeyen hata') });
+    }
+  }
+});
 
 router.put('/apikey', async (req: AuthRequest, res: Response) => {
   try {

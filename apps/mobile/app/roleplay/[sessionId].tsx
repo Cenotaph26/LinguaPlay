@@ -1,19 +1,122 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { roleplayApi, vocabularyApi } from '../../services/api';
+import { roleplayApi, vocabularyApi, BASE_URL } from '../../services/api';
+import { useAuthStore } from '../../stores/authStore';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
   correction?: { original: string; suggestion: string; explanation: string } | null;
+}
+
+interface WordExplain {
+  word: string;
+  definition: string;
+  definitionTr: string;
+  phonetic: string;
+  examples: string[];
+  synonyms: string[];
+}
+
+function TappableText({ text, onWordLongPress }: { text: string; onWordLongPress: (word: string) => void }) {
+  const tokens = text.split(/(\s+)/);
+  return (
+    <Text style={{ color: '#110D24', fontSize: 15, lineHeight: 22 }}>
+      {tokens.map((token, i) => {
+        if (/\s+/.test(token)) return token;
+        return (
+          <Text
+            key={i}
+            onLongPress={() => {
+              const clean = token.replace(/[^a-zA-Z']/g, '').toLowerCase();
+              if (clean.length > 1) onWordLongPress(clean);
+            }}
+            delayLongPress={400}
+          >
+            {token}
+          </Text>
+        );
+      })}
+    </Text>
+  );
+}
+
+function WordExplainModal({
+  visible, word, data, loading, onClose,
+}: {
+  visible: boolean; word: string; data: WordExplain | null;
+  loading: boolean; onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <TouchableOpacity
+        style={{ flex: 1, backgroundColor: 'rgba(17,13,36,0.5)', justifyContent: 'flex-end' }}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <TouchableOpacity activeOpacity={1}>
+          <View style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: 500 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: '#110D24' }}>{word}</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={22} color="#9B94CC" />
+              </TouchableOpacity>
+            </View>
+
+            {loading ? (
+              <View style={{ paddingVertical: 32, alignItems: 'center' }}>
+                <ActivityIndicator color="#7355F7" />
+                <Text style={{ color: '#9B94CC', marginTop: 8, fontSize: 13 }}>Claude açıklıyor...</Text>
+              </View>
+            ) : data ? (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {data.phonetic ? (
+                  <Text style={{ color: '#9B94CC', fontSize: 13, marginBottom: 8 }}>{data.phonetic}</Text>
+                ) : null}
+                <View style={{ backgroundColor: '#F0EEF9', borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                  <Text style={{ color: '#6B638F', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>İNGİLİZCE</Text>
+                  <Text style={{ color: '#110D24', fontSize: 14 }}>{data.definition}</Text>
+                </View>
+                <View style={{ backgroundColor: 'rgba(14,158,128,0.08)', borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                  <Text style={{ color: '#0E9E80', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>TÜRKÇE</Text>
+                  <Text style={{ color: '#110D24', fontSize: 14 }}>{data.definitionTr}</Text>
+                </View>
+                {data.examples.length > 0 && (
+                  <View style={{ marginBottom: 10 }}>
+                    <Text style={{ color: '#6B638F', fontSize: 12, fontWeight: '600', marginBottom: 6 }}>ÖRNEKLER</Text>
+                    {data.examples.map((ex, i) => (
+                      <Text key={i} style={{ color: '#6B638F', fontSize: 13, marginBottom: 4 }}>• {ex}</Text>
+                    ))}
+                  </View>
+                )}
+                {data.synonyms.length > 0 && (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {data.synonyms.map((s, i) => (
+                      <View key={i} style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
+                        <Text style={{ color: '#7355F7', fontSize: 12 }}>{s}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </ScrollView>
+            ) : (
+              <Text style={{ color: '#9B94CC', fontSize: 14, textAlign: 'center', paddingVertical: 16 }}>
+                Açıklama bulunamadı
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
 }
 
 function FeedbackScreen({ feedback }: { feedback: { fluencyScore: number; grammarMistakes: string[]; newVocabulary: string[]; suggestions: string } }) {
@@ -140,6 +243,11 @@ export default function RoleplayChat() {
     newVocabulary: string[];
     suggestions: string;
   } | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const [wordModal, setWordModal] = useState<{ visible: boolean; word: string; loading: boolean; data: WordExplain | null }>({
+    visible: false, word: '', loading: false, data: null,
+  });
   const scrollRef = useRef<ScrollView>(null);
   const queryClient = useQueryClient();
 
@@ -155,29 +263,101 @@ export default function RoleplayChat() {
     }
   }, [sessionData]);
 
-  const sendMutation = useMutation({
-    mutationFn: (content: string) =>
-      roleplayApi.sendMessage(sessionId, content).then((r) => r.data),
-    onSuccess: (data) => {
-      setMessages((prev) => {
-        const updated = [...prev];
-        for (let i = updated.length - 1; i >= 0; i--) {
-          if (updated[i].role === 'user') {
-            updated[i] = { ...updated[i], correction: data.correction ?? null };
-            break;
+  async function handleWordLongPress(word: string) {
+    setWordModal({ visible: true, word, loading: true, data: null });
+    try {
+      const { data } = await vocabularyApi.explainWordByString(word);
+      setWordModal((prev) => ({ ...prev, loading: false, data }));
+    } catch {
+      setWordModal((prev) => ({ ...prev, loading: false, data: null }));
+    }
+  }
+
+  async function sendMessageStreaming(text: string) {
+    setMessages((prev) => [...prev, { role: 'user', content: text, timestamp: new Date().toISOString() }]);
+    setInput('');
+    setIsStreaming(true);
+    setStreamingText('');
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+
+    const token = useAuthStore.getState().token;
+    let displayBuffer = '';
+    let jsonStarted = false;
+
+    try {
+      const response = await fetch(`${BASE_URL}/roleplay/sessions/${sessionId}/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: text }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+
+            if (data.type === 'token' && !jsonStarted) {
+              displayBuffer += data.text;
+              const jsonIdx = displayBuffer.indexOf('{"correction"');
+              if (jsonIdx !== -1) {
+                jsonStarted = true;
+                displayBuffer = displayBuffer.slice(0, jsonIdx).trimEnd();
+              }
+              setStreamingText(displayBuffer);
+              scrollRef.current?.scrollToEnd({ animated: false });
+            } else if (data.type === 'done') {
+              setIsStreaming(false);
+              setStreamingText('');
+              setMessages((prev) => {
+                const updated = [...prev];
+                if (data.correction) {
+                  for (let i = updated.length - 1; i >= 0; i--) {
+                    if (updated[i].role === 'user') {
+                      updated[i] = { ...updated[i], correction: data.correction };
+                      break;
+                    }
+                  }
+                }
+                return [...updated, {
+                  role: 'assistant',
+                  content: data.displayText,
+                  timestamp: new Date().toISOString(),
+                }];
+              });
+              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+            } else if (data.type === 'error') {
+              throw new Error(data.error);
+            }
+          } catch {
+            // ignore individual parse errors
           }
         }
-        return [
-          ...updated,
-          { role: 'assistant', content: data.reply, timestamp: new Date().toISOString(), correction: null },
-        ];
-      });
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-    },
-    onError: (err: any) => {
-      Alert.alert('Hata', err.response?.data?.error ?? 'Mesaj gönderilemedi');
-    },
-  });
+      }
+    } catch (err: any) {
+      setIsStreaming(false);
+      setStreamingText('');
+      Alert.alert('Hata', err.message ?? 'Mesaj gönderilemedi');
+    }
+  }
 
   const endMutation = useMutation({
     mutationFn: () => roleplayApi.endSession(sessionId).then((r) => r.data),
@@ -193,14 +373,8 @@ export default function RoleplayChat() {
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || sendMutation.isPending) return;
-    setMessages((prev) => [
-      ...prev,
-      { role: 'user', content: text, timestamp: new Date().toISOString() },
-    ]);
-    setInput('');
-    sendMutation.mutate(text);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    if (!text || isStreaming) return;
+    sendMessageStreaming(text);
   };
 
   useEffect(() => {
@@ -224,7 +398,6 @@ export default function RoleplayChat() {
           <TouchableOpacity onPress={() => router.back()} style={{ padding: 2 }}>
             <Ionicons name="arrow-back" size={22} color="#6B638F" />
           </TouchableOpacity>
-          {/* AI avatar */}
           <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#F0EEF9', borderWidth: 1, borderColor: '#E4E1F5', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Ionicons name="person-outline" size={16} color="#6B638F" />
           </View>
@@ -236,14 +409,12 @@ export default function RoleplayChat() {
               {sessionData?.scene ? `${sessionData.scene.category} · Aktif` : 'Özel sahne · Aktif'}
             </Text>
           </View>
-          {/* Hint button */}
           <TouchableOpacity
             onPress={() => {
               const hintMsg = "Could you give me a hint or suggestion for what I should say next?";
-              setMessages((prev) => [...prev, { role: 'user', content: hintMsg, timestamp: new Date().toISOString() }]);
-              sendMutation.mutate(hintMsg);
+              sendMessageStreaming(hintMsg);
             }}
-            disabled={sendMutation.isPending}
+            disabled={isStreaming}
             style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(115,85,247,0.2)' }}
           >
             <Text style={{ color: '#7355F7', fontSize: 11, fontWeight: '600' }}>İpucu</Text>
@@ -289,7 +460,11 @@ export default function RoleplayChat() {
                     padding: 12,
                   }}
                 >
-                  <Text style={{ color: '#110D24', fontSize: 15, lineHeight: 22 }}>{msg.content}</Text>
+                  {msg.role === 'assistant' ? (
+                    <TappableText text={msg.content} onWordLongPress={handleWordLongPress} />
+                  ) : (
+                    <Text style={{ color: '#110D24', fontSize: 15, lineHeight: 22 }}>{msg.content}</Text>
+                  )}
                 </View>
                 {msg.role === 'user' && msg.correction && (
                   <View style={{ maxWidth: '80%' }}>
@@ -299,13 +474,24 @@ export default function RoleplayChat() {
               </View>
             ))
           )}
-          {sendMutation.isPending && (
+          {isStreaming && streamingText ? (
+            <View style={{ alignItems: 'flex-start', marginBottom: 8 }}>
+              <View style={{ maxWidth: '80%', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 16, borderBottomLeftRadius: 4, padding: 12 }}>
+                <Text style={{ color: '#110D24', fontSize: 15, lineHeight: 22 }}>{streamingText}</Text>
+                <View style={{ flexDirection: 'row', gap: 3, marginTop: 6 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#7355F7', opacity: 0.8 }} />
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#7355F7', opacity: 0.5 }} />
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#7355F7', opacity: 0.3 }} />
+                </View>
+              </View>
+            </View>
+          ) : isStreaming ? (
             <View style={{ alignItems: 'flex-start', paddingLeft: 4, marginBottom: 8 }}>
               <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#E4E1F5' }}>
                 <ActivityIndicator size="small" color="#7355F7" />
               </View>
             </View>
-          )}
+          ) : null}
         </ScrollView>
 
         <View style={{ flexDirection: 'row', padding: 12, gap: 10, borderTopWidth: 1, borderTopColor: '#E4E1F5', alignItems: 'flex-end' }}>
@@ -325,12 +511,13 @@ export default function RoleplayChat() {
               fontSize: 15,
               maxHeight: 120,
             }}
+            onSubmitEditing={handleSend}
           />
           <TouchableOpacity
             onPress={handleSend}
-            disabled={!input.trim() || sendMutation.isPending}
+            disabled={!input.trim() || isStreaming}
             style={{
-              backgroundColor: input.trim() ? '#7355F7' : '#F0EEF9',
+              backgroundColor: input.trim() && !isStreaming ? '#7355F7' : '#F0EEF9',
               borderRadius: 20,
               width: 40,
               height: 40,
@@ -338,10 +525,18 @@ export default function RoleplayChat() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="send" size={18} color={input.trim() ? '#fff' : '#9B94CC'} />
+            <Ionicons name="send" size={18} color={input.trim() && !isStreaming ? '#fff' : '#9B94CC'} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <WordExplainModal
+        visible={wordModal.visible}
+        word={wordModal.word}
+        data={wordModal.data}
+        loading={wordModal.loading}
+        onClose={() => setWordModal((prev) => ({ ...prev, visible: false }))}
+      />
     </SafeAreaView>
   );
 }
