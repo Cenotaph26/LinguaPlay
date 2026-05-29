@@ -37,7 +37,7 @@ function CorrectionBadge({ correction }: { correction: { original: string; sugge
             <Text style={{ fontWeight: '600' }}>Daha iyi:</Text> {correction.suggestion}
           </Text>
           {correction.explanation ? (
-            <Text style={{ color: '#a1a1aa', fontSize: 11 }}>{correction.explanation}</Text>
+            <Text style={{ color: '#6B638F', fontSize: 11 }}>{correction.explanation}</Text>
           ) : null}
         </View>
       )}
@@ -127,31 +127,31 @@ export default function RoleplayChat() {
 
   if (ended && feedback) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#09090b' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F3FF' }}>
         <View style={{ flex: 1, padding: 24 }}>
-          <Text style={{ color: '#fafafa', fontSize: 22, fontWeight: 'bold', marginBottom: 4 }}>Oturum Bitti</Text>
-          <Text style={{ color: '#71717a', fontSize: 14, marginBottom: 24 }}>Geri bildiriminiz hazır</Text>
+          <Text style={{ color: '#110D24', fontSize: 22, fontWeight: 'bold', marginBottom: 4 }}>Oturum Bitti</Text>
+          <Text style={{ color: '#9B94CC', fontSize: 14, marginBottom: 24 }}>Geri bildiriminiz hazır</Text>
 
-          <View style={{ backgroundColor: '#18181b', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <Text style={{ color: '#a1a1aa', fontSize: 14 }}>Akıcılık Puanı</Text>
-              <Text style={{ color: '#6366f1', fontSize: 28, fontWeight: 'bold' }}>{feedback.fluencyScore}/10</Text>
+              <Text style={{ color: '#6B638F', fontSize: 14 }}>Akıcılık Puanı</Text>
+              <Text style={{ color: '#7355F7', fontSize: 28, fontWeight: 'bold' }}>{feedback.fluencyScore}/10</Text>
             </View>
             {feedback.grammarMistakes.length > 0 && (
               <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: '#fafafa', fontWeight: '600', marginBottom: 8 }}>Dilbilgisi Düzeltmeleri</Text>
+                <Text style={{ color: '#110D24', fontWeight: '600', marginBottom: 8 }}>Dilbilgisi Düzeltmeleri</Text>
                 {feedback.grammarMistakes.map((m, i) => (
-                  <Text key={i} style={{ color: '#a1a1aa', fontSize: 13, marginBottom: 4 }}>• {m}</Text>
+                  <Text key={i} style={{ color: '#6B638F', fontSize: 13, marginBottom: 4 }}>• {m}</Text>
                 ))}
               </View>
             )}
             {feedback.newVocabulary.length > 0 && (
               <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: '#fafafa', fontWeight: '600', marginBottom: 8 }}>Yeni Kelimeler</Text>
+                <Text style={{ color: '#110D24', fontWeight: '600', marginBottom: 8 }}>Yeni Kelimeler</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                   {feedback.newVocabulary.map((w, i) => (
-                    <View key={i} style={{ backgroundColor: '#6366f122', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 }}>
-                      <Text style={{ color: '#818cf8', fontSize: 13 }}>{w}</Text>
+                    <View key={i} style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 }}>
+                      <Text style={{ color: '#8B6EFF', fontSize: 13 }}>{w}</Text>
                     </View>
                   ))}
                 </View>
@@ -159,15 +159,15 @@ export default function RoleplayChat() {
             )}
             {feedback.suggestions && (
               <View>
-                <Text style={{ color: '#fafafa', fontWeight: '600', marginBottom: 6 }}>Öneri</Text>
-                <Text style={{ color: '#a1a1aa', fontSize: 13 }}>{feedback.suggestions}</Text>
+                <Text style={{ color: '#110D24', fontWeight: '600', marginBottom: 6 }}>Öneri</Text>
+                <Text style={{ color: '#6B638F', fontSize: 13 }}>{feedback.suggestions}</Text>
               </View>
             )}
           </View>
 
           <TouchableOpacity
             onPress={() => router.replace('/(tabs)/roleplay')}
-            style={{ backgroundColor: '#6366f1', borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
+            style={{ backgroundColor: '#7355F7', borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
           >
             <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Sahne Listesine Dön</Text>
           </TouchableOpacity>
@@ -177,17 +177,17 @@ export default function RoleplayChat() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#09090b' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F3FF' }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#27272a', gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E4E1F5', gap: 12 }}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color="#a1a1aa" />
+            <Ionicons name="arrow-back" size={22} color="#6B638F" />
           </TouchableOpacity>
-          <Text style={{ color: '#fafafa', fontWeight: '600', fontSize: 16, flex: 1 }}>Konuşma Pratiği</Text>
+          <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 16, flex: 1 }}>Konuşma Pratiği</Text>
           <TouchableOpacity
             onPress={() => Alert.alert('Oturumu Bitir', 'Oturumu bitirip geri bildirim almak istiyor musun?', [
               { text: 'Devam Et' },
@@ -196,8 +196,8 @@ export default function RoleplayChat() {
             disabled={endMutation.isPending || messages.length < 2}
           >
             {endMutation.isPending
-              ? <ActivityIndicator size="small" color="#6366f1" />
-              : <Text style={{ color: messages.length >= 2 ? '#6366f1' : '#3f3f46', fontWeight: '600' }}>Bitir</Text>
+              ? <ActivityIndicator size="small" color="#7355F7" />
+              : <Text style={{ color: messages.length >= 2 ? '#7355F7' : '#E4E1F5', fontWeight: '600' }}>Bitir</Text>
             }
           </TouchableOpacity>
         </View>
@@ -211,7 +211,7 @@ export default function RoleplayChat() {
         >
           {sessionLoading ? (
             <View style={{ alignItems: 'center', paddingTop: 40 }}>
-              <ActivityIndicator color="#6366f1" />
+              <ActivityIndicator color="#7355F7" />
             </View>
           ) : (
             messages.map((msg, index) => (
@@ -219,16 +219,16 @@ export default function RoleplayChat() {
                 <View
                   style={{
                     maxWidth: '80%',
-                    backgroundColor: msg.role === 'user' ? 'rgba(99,102,241,0.12)' : '#27272a',
+                    backgroundColor: msg.role === 'user' ? 'rgba(115,85,247,0.08)' : '#ffffff',
                     borderWidth: 1,
-                    borderColor: msg.role === 'user' ? 'rgba(99,102,241,0.30)' : 'rgba(255,255,255,0.07)',
+                    borderColor: msg.role === 'user' ? 'rgba(115,85,247,0.25)' : '#E4E1F5',
                     borderRadius: 16,
                     borderBottomRightRadius: msg.role === 'user' ? 4 : 16,
                     borderBottomLeftRadius: msg.role === 'user' ? 16 : 4,
                     padding: 12,
                   }}
                 >
-                  <Text style={{ color: '#fafafa', fontSize: 15, lineHeight: 22 }}>{msg.content}</Text>
+                  <Text style={{ color: '#110D24', fontSize: 15, lineHeight: 22 }}>{msg.content}</Text>
                 </View>
                 {msg.role === 'user' && msg.correction && (
                   <View style={{ maxWidth: '80%' }}>
@@ -240,27 +240,27 @@ export default function RoleplayChat() {
           )}
           {sendMutation.isPending && (
             <View style={{ alignItems: 'flex-start', paddingLeft: 4, marginBottom: 8 }}>
-              <View style={{ backgroundColor: '#18181b', borderRadius: 16, padding: 12 }}>
-                <ActivityIndicator size="small" color="#6366f1" />
+              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#E4E1F5' }}>
+                <ActivityIndicator size="small" color="#7355F7" />
               </View>
             </View>
           )}
         </ScrollView>
 
-        <View style={{ flexDirection: 'row', padding: 12, gap: 10, borderTopWidth: 1, borderTopColor: '#27272a', alignItems: 'flex-end' }}>
+        <View style={{ flexDirection: 'row', padding: 12, gap: 10, borderTopWidth: 1, borderTopColor: '#E4E1F5', alignItems: 'flex-end' }}>
           <TextInput
             value={input}
             onChangeText={setInput}
             placeholder="Bir şeyler yaz..."
-            placeholderTextColor="#52525b"
+            placeholderTextColor="#9B94CC"
             multiline
             style={{
               flex: 1,
-              backgroundColor: '#18181b',
+              backgroundColor: '#ffffff',
               borderRadius: 20,
               paddingHorizontal: 16,
               paddingVertical: 10,
-              color: '#fafafa',
+              color: '#110D24',
               fontSize: 15,
               maxHeight: 120,
             }}
@@ -269,7 +269,7 @@ export default function RoleplayChat() {
             onPress={handleSend}
             disabled={!input.trim() || sendMutation.isPending}
             style={{
-              backgroundColor: input.trim() ? '#6366f1' : '#27272a',
+              backgroundColor: input.trim() ? '#7355F7' : '#F0EEF9',
               borderRadius: 20,
               width: 40,
               height: 40,
@@ -277,7 +277,7 @@ export default function RoleplayChat() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="send" size={18} color={input.trim() ? '#fff' : '#52525b'} />
+            <Ionicons name="send" size={18} color={input.trim() ? '#fff' : '#9B94CC'} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

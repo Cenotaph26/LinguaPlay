@@ -32,10 +32,10 @@ export default function Profile() {
   });
 
   const STATS: Array<{ label: string; value: number | undefined; icon: IconName; color: string }> = [
-    { label: 'Kelime', value: stats?.wordCount, icon: 'book-outline', color: '#6366f1' },
-    { label: 'Ustalaşıldı', value: stats?.masteredCount, icon: 'checkmark-circle-outline', color: '#22c55e' },
-    { label: 'Seans', value: stats?.sessionCount, icon: 'chatbubbles-outline', color: '#8b5cf6' },
-    { label: 'İçerik', value: stats?.contentCount, icon: 'film-outline', color: '#f59e0b' },
+    { label: 'Kelime', value: stats?.wordCount, icon: 'book-outline', color: '#7355F7' },
+    { label: 'Ustalaşıldı', value: stats?.masteredCount, icon: 'checkmark-circle-outline', color: '#0E9E80' },
+    { label: 'Seans', value: stats?.sessionCount, icon: 'chatbubbles-outline', color: '#7355F7' },
+    { label: 'İçerik', value: stats?.contentCount, icon: 'film-outline', color: '#F59E0B' },
   ];
 
   async function handleSaveApiKey() {
@@ -110,7 +110,7 @@ export default function Profile() {
         {/* User Card */}
         <View className="bg-bg2 border border-border rounded-2xl p-4 mb-4">
           <View className="flex-row items-center" style={{ gap: 12 }}>
-            <View style={{ backgroundColor: '#6366f1', borderRadius: 9999, width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ backgroundColor: '#7355F7', borderRadius: 9999, width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>
                 {(user?.email ?? 'U').slice(0, 2).toUpperCase()}
               </Text>
@@ -118,23 +118,23 @@ export default function Profile() {
             <View className="flex-1">
               <Text className="text-text1 font-semibold" numberOfLines={1}>{user?.email ?? '—'}</Text>
               <View className="flex-row items-center mt-1" style={{ gap: 6 }}>
-                <View style={{ backgroundColor: 'rgba(99,102,241,0.12)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(99,102,241,0.30)' }}>
-                  <Text style={{ color: '#818cf8', fontWeight: '600', fontSize: 11 }}>
+                <View style={{ backgroundColor: 'rgba(115,85,247,0.08)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(115,85,247,0.25)' }}>
+                  <Text style={{ color: '#8B6EFF', fontWeight: '600', fontSize: 11 }}>
                     {user?.level === 'UNSET' ? 'Seviye yok' : user?.level}
                   </Text>
                 </View>
                 {hasApiKey && (
-                  <View style={{ backgroundColor: 'rgba(34,197,94,0.10)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(34,197,94,0.25)' }}>
-                    <Text style={{ color: '#22c55e', fontSize: 10, fontWeight: '600' }}>API Aktif</Text>
+                  <View style={{ backgroundColor: 'rgba(14,158,128,0.10)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(14,158,128,0.25)' }}>
+                    <Text style={{ color: '#0E9E80', fontSize: 10, fontWeight: '600' }}>API Aktif</Text>
                   </View>
                 )}
               </View>
             </View>
             <TouchableOpacity
               onPress={() => router.push('/placement')}
-              style={{ backgroundColor: '#27272a', borderRadius: 10, padding: 8 }}
+              style={{ backgroundColor: '#F0EEF9', borderRadius: 10, padding: 8 }}
             >
-              <Ionicons name="school-outline" size={18} color="#a1a1aa" />
+              <Ionicons name="school-outline" size={18} color="#6B638F" />
             </TouchableOpacity>
           </View>
         </View>
@@ -154,12 +154,12 @@ export default function Profile() {
         <View className="bg-bg2 border border-border rounded-2xl p-4 mb-4">
           <View className="flex-row items-center justify-between mb-3">
             <View className="flex-row items-center" style={{ gap: 8 }}>
-              <Ionicons name="key-outline" size={18} color="#a1a1aa" />
+              <Ionicons name="key-outline" size={18} color="#6B638F" />
               <Text className="text-text1 font-semibold">Claude API Anahtarı</Text>
             </View>
             {hasApiKey && !editingKey && (
               <TouchableOpacity onPress={() => setEditingKey(true)}>
-                <Text style={{ color: '#6366f1', fontSize: 13 }}>Değiştir</Text>
+                <Text style={{ color: '#7355F7', fontSize: 13 }}>Değiştir</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -171,9 +171,9 @@ export default function Profile() {
               </Text>
               <View className="bg-bg3 border border-border rounded-xl flex-row items-center px-3">
                 <TextInput
-                  style={{ flex: 1, paddingVertical: 12, color: '#fafafa', fontSize: 13 }}
+                  style={{ flex: 1, paddingVertical: 12, color: '#110D24', fontSize: 13 }}
                   placeholder="sk-ant-api03-..."
-                  placeholderTextColor="#52525b"
+                  placeholderTextColor="#9B94CC"
                   value={apiKey}
                   onChangeText={setApiKey}
                   secureTextEntry={!showKey}
@@ -181,7 +181,7 @@ export default function Profile() {
                   autoCorrect={false}
                 />
                 <TouchableOpacity onPress={() => setShowKey(!showKey)} style={{ padding: 4 }}>
-                  <Ionicons name={showKey ? 'eye-off-outline' : 'eye-outline'} size={18} color="#71717a" />
+                  <Ionicons name={showKey ? 'eye-off-outline' : 'eye-outline'} size={18} color="#9B94CC" />
                 </TouchableOpacity>
               </View>
               <View className="flex-row" style={{ gap: 8 }}>
@@ -189,11 +189,11 @@ export default function Profile() {
                   onPress={handleSaveApiKey}
                   disabled={savingKey || apiKey.trim().length < 20}
                   className="flex-1 rounded-xl py-3 items-center"
-                  style={{ backgroundColor: savingKey || apiKey.trim().length < 20 ? '#3f3f46' : '#6366f1' }}
+                  style={{ backgroundColor: savingKey || apiKey.trim().length < 20 ? '#E4E1F5' : '#7355F7' }}
                 >
                   {savingKey
                     ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Kaydet</Text>
+                    : <Text style={{ color: savingKey || apiKey.trim().length < 20 ? '#9B94CC' : '#fff', fontWeight: '600', fontSize: 14 }}>Kaydet</Text>
                   }
                 </TouchableOpacity>
                 {editingKey && (
@@ -209,13 +209,13 @@ export default function Profile() {
           ) : (
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center" style={{ gap: 8 }}>
-                <Ionicons name="checkmark-circle" size={18} color="#22c55e" />
+                <Ionicons name="checkmark-circle" size={18} color="#0E9E80" />
                 <Text className="text-text2 text-sm">API anahtarı aktif</Text>
               </View>
               <TouchableOpacity onPress={handleDeleteApiKey} disabled={deletingKey}>
                 {deletingKey
-                  ? <ActivityIndicator size="small" color="#ef4444" />
-                  : <Text style={{ color: '#ef4444', fontSize: 13 }}>Sil</Text>
+                  ? <ActivityIndicator size="small" color="#E84E32" />
+                  : <Text style={{ color: '#E84E32', fontSize: 13 }}>Sil</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -225,7 +225,7 @@ export default function Profile() {
         {/* Language Toggle */}
         <View className="bg-bg2 border border-border rounded-2xl p-4 mb-4">
           <View className="flex-row items-center mb-3" style={{ gap: 8 }}>
-            <Ionicons name="language-outline" size={18} color="#a1a1aa" />
+            <Ionicons name="language-outline" size={18} color="#6B638F" />
             <Text className="text-text1 font-semibold">Arayüz Dili</Text>
           </View>
           <View className="flex-row" style={{ gap: 8 }}>
@@ -237,12 +237,12 @@ export default function Profile() {
                 className="flex-1 rounded-xl items-center border"
                 style={{
                   paddingVertical: 10,
-                  backgroundColor: lang === l ? '#6366f1' : '#27272a',
-                  borderColor: lang === l ? '#6366f1' : '#3f3f46',
+                  backgroundColor: lang === l ? '#7355F7' : '#F0EEF9',
+                  borderColor: lang === l ? '#7355F7' : '#E4E1F5',
                   opacity: changingLang ? 0.5 : 1,
                 }}
               >
-                <Text style={{ color: lang === l ? '#fff' : '#a1a1aa', fontWeight: '600', fontSize: 14 }}>
+                <Text style={{ color: lang === l ? '#fff' : '#6B638F', fontWeight: '600', fontSize: 14 }}>
                   {l === 'tr' ? 'Türkçe' : 'English'}
                 </Text>
               </TouchableOpacity>
@@ -256,8 +256,8 @@ export default function Profile() {
           className="bg-bg2 border border-border rounded-2xl p-4 flex-row items-center justify-center mb-8"
           style={{ gap: 8 }}
         >
-          <Ionicons name="log-out-outline" size={18} color="#ef4444" />
-          <Text style={{ color: '#ef4444', fontWeight: '500' }}>Çıkış Yap</Text>
+          <Ionicons name="log-out-outline" size={18} color="#E84E32" />
+          <Text style={{ color: '#E84E32', fontWeight: '500' }}>Çıkış Yap</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

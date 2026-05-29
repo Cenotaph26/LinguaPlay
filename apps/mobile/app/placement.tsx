@@ -7,9 +7,9 @@ import { placementApi } from '../services/api';
 import { useQuery, useMutation } from '@tanstack/react-query';
 
 const LEVEL_COLORS: Record<string, string> = {
-  A1: '#22c55e', A2: '#22c55e',
-  B1: '#6366f1', B2: '#6366f1',
-  C1: '#f59e0b', C2: '#f59e0b',
+  A1: '#0E9E80', A2: '#0E9E80',
+  B1: '#7355F7', B2: '#7355F7',
+  C1: '#F59E0B', C2: '#F59E0B',
 };
 
 export default function Placement() {
@@ -58,14 +58,14 @@ export default function Placement() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-bg items-center justify-center">
-        <ActivityIndicator color="#6366f1" size="large" />
+        <ActivityIndicator color="#7355F7" size="large" />
         <Text className="text-text3 mt-4">Sorular yükleniyor...</Text>
       </SafeAreaView>
     );
   }
 
   if (finished && result) {
-    const lc = LEVEL_COLORS[result.level] ?? '#71717a';
+    const lc = LEVEL_COLORS[result.level] ?? '#9B94CC';
     return (
       <SafeAreaView className="flex-1 bg-bg">
         <View className="flex-1 px-6 items-center justify-center">
@@ -98,7 +98,7 @@ export default function Placement() {
   if (evaluateMutation.isPending) {
     return (
       <SafeAreaView className="flex-1 bg-bg items-center justify-center">
-        <ActivityIndicator color="#6366f1" size="large" />
+        <ActivityIndicator color="#7355F7" size="large" />
         <Text className="text-text3 mt-4">Sonuç hesaplanıyor...</Text>
       </SafeAreaView>
     );
@@ -116,14 +116,14 @@ export default function Placement() {
     <SafeAreaView className="flex-1 bg-bg">
       <View className="px-5 pt-4 pb-2 flex-row items-center" style={{ gap: 12 }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ color: '#6366f1', fontSize: 15 }}>Geri</Text>
+          <Text style={{ color: '#7355F7', fontSize: 15 }}>Geri</Text>
         </TouchableOpacity>
         <View className="flex-1 bg-bg3 rounded-full h-2">
           <View
             style={{
               width: `${progress * 100}%`,
               height: 8,
-              backgroundColor: '#6366f1',
+              backgroundColor: '#7355F7',
               borderRadius: 4,
             }}
           />
@@ -134,7 +134,7 @@ export default function Placement() {
       <View className="flex-1 px-5 justify-center">
         <View
           style={{
-            backgroundColor: (LEVEL_COLORS[current.level] ?? '#71717a') + '22',
+            backgroundColor: (LEVEL_COLORS[current.level] ?? '#9B94CC') + '22',
             alignSelf: 'flex-start',
             paddingHorizontal: 10,
             paddingVertical: 4,
@@ -142,7 +142,7 @@ export default function Placement() {
             marginBottom: 16,
           }}
         >
-          <Text style={{ color: LEVEL_COLORS[current.level] ?? '#71717a', fontSize: 12, fontWeight: '600' }}>
+          <Text style={{ color: LEVEL_COLORS[current.level] ?? '#9B94CC', fontSize: 12, fontWeight: '600' }}>
             {current.level}
           </Text>
         </View>
@@ -160,14 +160,14 @@ export default function Placement() {
                 onPress={() => handleSelect(idx)}
                 disabled={selectedIndex !== null}
                 style={{
-                  backgroundColor: isSelected ? '#6366f133' : '#18181b',
-                  borderColor: isSelected ? '#6366f1' : '#27272a',
+                  backgroundColor: isSelected ? 'rgba(115,85,247,0.12)' : '#ffffff',
+                  borderColor: isSelected ? '#7355F7' : '#E4E1F5',
                   borderWidth: 1,
                   borderRadius: 14,
                   padding: 16,
                 }}
               >
-                <Text style={{ color: '#fafafa', fontSize: 15 }}>{option}</Text>
+                <Text style={{ color: '#110D24', fontSize: 15 }}>{option}</Text>
               </TouchableOpacity>
             );
           })}

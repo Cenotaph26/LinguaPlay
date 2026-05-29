@@ -54,7 +54,7 @@ export default function Login() {
               <TextInput
                 className="bg-bg2 border border-border rounded-xl px-4 py-3 text-text1 text-base"
                 placeholder="ornek@email.com"
-                placeholderTextColor="#71717a"
+                placeholderTextColor="#9B94CC"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -68,7 +68,7 @@ export default function Login() {
               <TextInput
                 className="bg-bg2 border border-border rounded-xl px-4 py-3 text-text1 text-base"
                 placeholder="Şifrenizi girin"
-                placeholderTextColor="#71717a"
+                placeholderTextColor="#9B94CC"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
