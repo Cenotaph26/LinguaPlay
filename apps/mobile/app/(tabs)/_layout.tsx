@@ -17,14 +17,14 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#18181b',
-          borderTopColor: '#27272a',
+          backgroundColor: '#ffffff',
+          borderTopColor: '#E4E1F5',
           borderTopWidth: 1,
           paddingBottom: 4,
           height: 60,
         },
-        tabBarActiveTintColor: '#818cf8',
-        tabBarInactiveTintColor: '#71717a',
+        tabBarActiveTintColor: '#8B6EFF',
+        tabBarInactiveTintColor: '#9B94CC',
         tabBarLabelStyle: { fontSize: 11 },
       }}
     >

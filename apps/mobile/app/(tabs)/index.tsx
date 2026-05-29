@@ -9,10 +9,10 @@ import { useAuthStore } from '../../stores/authStore';
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const QUICK_ACTIONS: Array<{ label: string; icon: IconName; route: string; color: string }> = [
-  { label: 'Tekrar', icon: 'refresh-outline', route: '/review', color: '#6366f1' },
-  { label: 'Rol Yapma', icon: 'chatbubbles-outline', route: '/(tabs)/roleplay', color: '#8b5cf6' },
-  { label: 'İçerik', icon: 'play-circle-outline', route: '/(tabs)/content', color: '#f59e0b' },
-  { label: 'Quiz', icon: 'help-circle-outline', route: '/quiz', color: '#22c55e' },
+  { label: 'Tekrar', icon: 'refresh-outline', route: '/review', color: '#7355F7' },
+  { label: 'Rol Yapma', icon: 'chatbubbles-outline', route: '/(tabs)/roleplay', color: '#7355F7' },
+  { label: 'İçerik', icon: 'play-circle-outline', route: '/(tabs)/content', color: '#F59E0B' },
+  { label: 'Quiz', icon: 'help-circle-outline', route: '/quiz', color: '#0E9E80' },
 ];
 
 export default function Dashboard() {
@@ -41,8 +41,8 @@ export default function Dashboard() {
           <Text className="text-2xl font-bold text-text1">{user?.email?.split('@')[0] ?? 'Öğrenci'}</Text>
           {user?.level && user.level !== 'UNSET' && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
-              <View style={{ backgroundColor: '#6366f122', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 }}>
-                <Text style={{ color: '#818cf8', fontWeight: '600', fontSize: 13 }}>{user.level}</Text>
+              <View style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 }}>
+                <Text style={{ color: '#8B6EFF', fontWeight: '600', fontSize: 13 }}>{user.level}</Text>
               </View>
               {!user.hasApiKey && (
                 <TouchableOpacity
@@ -58,7 +58,7 @@ export default function Dashboard() {
           {user?.level === 'UNSET' && (
             <TouchableOpacity
               onPress={() => router.push('/placement')}
-              style={{ marginTop: 12, backgroundColor: '#6366f1', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              style={{ marginTop: 12, backgroundColor: '#7355F7', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}
             >
               <Ionicons name="school-outline" size={18} color="#fff" />
               <Text style={{ color: '#fff', fontWeight: '600' }}>Seviye Testi Al</Text>
@@ -66,7 +66,7 @@ export default function Dashboard() {
             </TouchableOpacity>
           )}
           </View>
-          <View style={{ backgroundColor: '#6366f1', borderRadius: 9999, width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
+          <View style={{ backgroundColor: '#7355F7', borderRadius: 9999, width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
               {(user?.email ?? 'U').slice(0, 1).toUpperCase()}
             </Text>
@@ -76,25 +76,25 @@ export default function Dashboard() {
         {dueCount > 0 && (
           <TouchableOpacity
             onPress={() => router.push('/review')}
-            style={{ backgroundColor: '#6366f122', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20, borderWidth: 1, borderColor: '#6366f133' }}
+            style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(115,85,247,0.25)' }}
           >
-            <View style={{ backgroundColor: '#6366f1', borderRadius: 10, padding: 8 }}>
+            <View style={{ backgroundColor: '#7355F7', borderRadius: 10, padding: 8 }}>
               <Ionicons name="time-outline" size={20} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fafafa', fontWeight: '600', fontSize: 15 }}>Tekrar Zamanı!</Text>
-              <Text style={{ color: '#a1a1aa', fontSize: 13 }}>{dueCount} kelime seni bekliyor</Text>
+              <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 15 }}>Tekrar Zamanı!</Text>
+              <Text style={{ color: '#6B638F', fontSize: 13 }}>{dueCount} kelime seni bekliyor</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#6366f1" />
+            <Ionicons name="chevron-forward" size={18} color="#7355F7" />
           </TouchableOpacity>
         )}
 
         <View className="flex-row mb-5" style={{ gap: 10 }}>
           {[
-            { label: 'Kelime', value: String(stats?.wordCount ?? 0), icon: 'book-outline' as IconName, color: '#6366f1' },
-            { label: 'Seans', value: String(stats?.sessionCount ?? 0), icon: 'chatbubbles-outline' as IconName, color: '#8b5cf6' },
-            { label: 'İçerik', value: String(stats?.contentCount ?? 0), icon: 'film-outline' as IconName, color: '#f59e0b' },
-            { label: 'Ustalaşıldı', value: String(stats?.masteredCount ?? 0), icon: 'checkmark-circle-outline' as IconName, color: '#22c55e' },
+            { label: 'Kelime', value: String(stats?.wordCount ?? 0), icon: 'book-outline' as IconName, color: '#7355F7' },
+            { label: 'Seans', value: String(stats?.sessionCount ?? 0), icon: 'chatbubbles-outline' as IconName, color: '#7355F7' },
+            { label: 'İçerik', value: String(stats?.contentCount ?? 0), icon: 'film-outline' as IconName, color: '#F59E0B' },
+            { label: 'Ustalaşıldı', value: String(stats?.masteredCount ?? 0), icon: 'checkmark-circle-outline' as IconName, color: '#0E9E80' },
           ].map((stat) => (
             <View key={stat.label} className="flex-1 bg-bg2 border border-border rounded-xl p-3 items-center">
               <Ionicons name={stat.icon} size={18} color={stat.color} />
@@ -110,12 +110,12 @@ export default function Dashboard() {
             <TouchableOpacity
               key={action.label}
               onPress={() => router.push(action.route as any)}
-              style={{ flex: 1, minWidth: '45%', backgroundColor: '#18181b', borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: '#27272a' }}
+              style={{ flex: 1, minWidth: '45%', backgroundColor: '#ffffff', borderRadius: 16, padding: 16, gap: 8, borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
             >
               <View style={{ backgroundColor: action.color + '22', borderRadius: 10, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons name={action.icon} size={20} color={action.color} />
               </View>
-              <Text style={{ color: '#fafafa', fontWeight: '600', fontSize: 14 }}>{action.label}</Text>
+              <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 14 }}>{action.label}</Text>
             </TouchableOpacity>
           ))}
         </View>

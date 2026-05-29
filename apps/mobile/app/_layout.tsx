@@ -33,11 +33,11 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#09090b' },
+          contentStyle: { backgroundColor: '#F5F3FF' },
         }}
       />
     </QueryClientProvider>

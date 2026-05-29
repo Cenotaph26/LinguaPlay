@@ -32,9 +32,9 @@ const CATEGORY_FILTERS: Array<{ id: string; label: string; icon: IconName }> = [
 ];
 
 const LEVEL_COLORS: Record<string, string> = {
-  A1: '#22c55e', A2: '#22c55e',
-  B1: '#6366f1', B2: '#6366f1',
-  C1: '#f59e0b', C2: '#f59e0b',
+  A1: '#0E9E80', A2: '#0E9E80',
+  B1: '#7355F7', B2: '#7355F7',
+  C1: '#F59E0B', C2: '#F59E0B',
 };
 
 export default function Roleplay() {
@@ -92,8 +92,8 @@ export default function Roleplay() {
           showsVerticalScrollIndicator={false}
         >
           <View style={{ paddingTop: 20, paddingBottom: 14 }}>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: '#fafafa' }}>Sahne Seç</Text>
-            <Text style={{ fontSize: 12, color: '#52525b', marginTop: 2 }}>Gerçek hayat senaryolarını pratik yap</Text>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: '#110D24' }}>Sahne Seç</Text>
+            <Text style={{ fontSize: 12, color: '#9B94CC', marginTop: 2 }}>Gerçek hayat senaryolarını pratik yap</Text>
           </View>
 
           {levelUnset && (
@@ -120,16 +120,16 @@ export default function Roleplay() {
               }
               setCustomModal(true);
             }}
-            style={{ marginBottom: 14, backgroundColor: '#27272a', borderWidth: 1, borderColor: '#3f3f46', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            style={{ marginBottom: 14, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
           >
-            <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(99,102,241,0.12)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.30)', alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="sparkles-outline" size={18} color="#818cf8" />
+            <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(115,85,247,0.08)', borderWidth: 1, borderColor: 'rgba(115,85,247,0.25)', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="sparkles-outline" size={18} color="#8B6EFF" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fafafa', fontWeight: '500', fontSize: 13 }}>Kendi sahneni yaz</Text>
-              <Text style={{ color: '#52525b', fontSize: 11, marginTop: 2 }}>AI senaryona göre canlandırır</Text>
+              <Text style={{ color: '#110D24', fontWeight: '500', fontSize: 13 }}>Kendi sahneni yaz</Text>
+              <Text style={{ color: '#9B94CC', fontSize: 11, marginTop: 2 }}>AI senaryona göre canlandırır</Text>
             </View>
-            <Ionicons name="chevron-forward" size={17} color="#52525b" />
+            <Ionicons name="chevron-forward" size={17} color="#9B94CC" />
           </TouchableOpacity>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
@@ -140,28 +140,28 @@ export default function Roleplay() {
                   <TouchableOpacity
                     key={cat.id}
                     onPress={() => setSelectedCategory(cat.id)}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, backgroundColor: active ? 'rgba(99,102,241,0.12)' : '#27272a', borderColor: active ? 'rgba(99,102,241,0.30)' : '#3f3f46' }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, backgroundColor: active ? 'rgba(115,85,247,0.08)' : '#ffffff', borderColor: active ? 'rgba(115,85,247,0.25)' : '#E4E1F5' }}
                   >
-                    <Ionicons name={cat.icon} size={14} color={active ? '#818cf8' : '#a1a1aa'} />
-                    <Text style={{ color: active ? '#818cf8' : '#a1a1aa', fontSize: 12, fontWeight: '500' }}>{cat.label}</Text>
+                    <Ionicons name={cat.icon} size={14} color={active ? '#8B6EFF' : '#6B638F'} />
+                    <Text style={{ color: active ? '#8B6EFF' : '#6B638F', fontSize: 12, fontWeight: '500' }}>{cat.label}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
           </ScrollView>
 
-          <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#52525b', marginBottom: 8 }}>
+          <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#9B94CC', marginBottom: 8 }}>
             Hazır Sahneler
           </Text>
 
           {isLoading ? (
             <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-              <ActivityIndicator color="#6366f1" />
+              <ActivityIndicator color="#7355F7" />
             </View>
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {(filteredScenes as RolePlayScene[]).map((scene) => {
-                const lc = LEVEL_COLORS[scene.difficulty] ?? '#71717a';
+                const lc = LEVEL_COLORS[scene.difficulty] ?? '#9B94CC';
                 const emoji = CATEGORY_EMOJI[scene.category] ?? '💬';
                 const isPending = startMutation.isPending && (startMutation.variables as any)?.sceneId === scene.id;
                 return (
@@ -169,16 +169,16 @@ export default function Roleplay() {
                     key={scene.id}
                     onPress={() => handleStartScene(scene.id)}
                     disabled={startMutation.isPending}
-                    style={{ width: '48.5%', backgroundColor: '#27272a', borderWidth: 1, borderColor: '#3f3f46', borderRadius: 14, padding: 14 }}
+                    style={{ width: '48.5%', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 14, padding: 14, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
                   >
                     {isPending ? (
                       <View style={{ height: 22, marginBottom: 8, justifyContent: 'center' }}>
-                        <ActivityIndicator size="small" color="#6366f1" />
+                        <ActivityIndicator size="small" color="#7355F7" />
                       </View>
                     ) : (
                       <Text style={{ fontSize: 22, marginBottom: 8 }}>{emoji}</Text>
                     )}
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: '#fafafa', lineHeight: 18, marginBottom: 7 }}>{scene.titleTr}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '500', color: '#110D24', lineHeight: 18, marginBottom: 7 }}>{scene.titleTr}</Text>
                     <View style={{ backgroundColor: lc + '1a', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', borderWidth: 1, borderColor: lc + '40' }}>
                       <Text style={{ color: lc, fontSize: 10, fontWeight: '600' }}>{scene.difficulty}</Text>
                     </View>
@@ -191,30 +191,30 @@ export default function Roleplay() {
       </View>
 
       <Modal visible={customModal} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: '#000000aa', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: '#18181b', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
-            <Text style={{ color: '#fafafa', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>Özel Senaryo</Text>
-            <Text style={{ color: '#71717a', fontSize: 14, marginBottom: 16 }}>Senaryonu Türkçe veya İngilizce anlat</Text>
+        <View style={{ flex: 1, backgroundColor: 'rgba(17,13,36,0.7)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+            <Text style={{ color: '#110D24', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>Özel Senaryo</Text>
+            <Text style={{ color: '#9B94CC', fontSize: 14, marginBottom: 16 }}>Senaryonu Türkçe veya İngilizce anlat</Text>
             <TextInput
               value={customScene}
               onChangeText={setCustomScene}
               placeholder="Örnek: Bir iş toplantısında proje sunumu yapıyorum..."
-              placeholderTextColor="#52525b"
+              placeholderTextColor="#9B94CC"
               multiline
               numberOfLines={4}
-              style={{ backgroundColor: '#27272a', borderRadius: 12, padding: 12, color: '#fafafa', fontSize: 14, minHeight: 100, marginBottom: 16, textAlignVertical: 'top' }}
+              style={{ backgroundColor: '#F0EEF9', borderRadius: 12, padding: 12, color: '#110D24', fontSize: 14, minHeight: 100, marginBottom: 16, textAlignVertical: 'top' }}
             />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 onPress={() => setCustomModal(false)}
-                style={{ flex: 1, backgroundColor: '#27272a', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: '#F0EEF9', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
               >
-                <Text style={{ color: '#a1a1aa', fontWeight: '600' }}>İptal</Text>
+                <Text style={{ color: '#6B638F', fontWeight: '600' }}>İptal</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => { if (customScene.trim()) startMutation.mutate({ customScene: customScene.trim() }); }}
                 disabled={!customScene.trim() || startMutation.isPending}
-                style={{ flex: 1, backgroundColor: '#6366f1', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: '#7355F7', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
               >
                 {startMutation.isPending
                   ? <ActivityIndicator color="#fff" size="small" />

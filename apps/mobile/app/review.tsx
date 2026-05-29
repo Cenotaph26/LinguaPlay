@@ -6,10 +6,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vocabularyApi } from '../services/api';
 
 const QUALITY_BUTTONS: Array<{ label: string; quality: 0 | 1 | 2 | 3; color: string }> = [
-  { label: 'Tekrar', quality: 0, color: '#ef4444' },
-  { label: 'Zor', quality: 1, color: '#f59e0b' },
-  { label: 'İyi', quality: 2, color: '#6366f1' },
-  { label: 'Kolay', quality: 3, color: '#22c55e' },
+  { label: 'Tekrar', quality: 0, color: '#E84E32' },
+  { label: 'Zor', quality: 1, color: '#F59E0B' },
+  { label: 'İyi', quality: 2, color: '#7355F7' },
+  { label: 'Kolay', quality: 3, color: '#0E9E80' },
 ];
 
 export default function Review() {
@@ -55,7 +55,7 @@ export default function Review() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-bg items-center justify-center">
-        <ActivityIndicator color="#6366f1" size="large" />
+        <ActivityIndicator color="#7355F7" size="large" />
       </SafeAreaView>
     );
   }
@@ -65,7 +65,7 @@ export default function Review() {
       <SafeAreaView className="flex-1 bg-bg items-center justify-center px-6">
         <View
           style={{
-            backgroundColor: '#22c55e22',
+            backgroundColor: 'rgba(14,158,128,0.10)',
             borderRadius: 60,
             width: 100,
             height: 100,
@@ -98,7 +98,7 @@ export default function Review() {
     <SafeAreaView className="flex-1 bg-bg">
       <View className="px-5 pt-4 flex-row items-center justify-between">
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ color: '#6366f1', fontSize: 15 }}>Geri</Text>
+          <Text style={{ color: '#7355F7', fontSize: 15 }}>Geri</Text>
         </TouchableOpacity>
         <Text className="text-text3 text-sm">{reviewedCount}/{items.length}</Text>
       </View>
@@ -109,7 +109,7 @@ export default function Review() {
             style={{
               width: `${progress * 100}%`,
               height: 8,
-              backgroundColor: '#6366f1',
+              backgroundColor: '#7355F7',
               borderRadius: 4,
             }}
           />
@@ -134,7 +134,7 @@ export default function Review() {
             <Text className="text-text3 text-sm mt-4">Dokunarak cevabı göster</Text>
           ) : (
             <View className="mt-4 w-full">
-              <View style={{ height: 1, backgroundColor: '#27272a', marginBottom: 16 }} />
+              <View style={{ height: 1, backgroundColor: '#E4E1F5', marginBottom: 16 }} />
               <Text className="text-text2 text-base mb-2">{current.definition}</Text>
               <Text className="text-text3 text-sm mb-3">{current.definitionTr}</Text>
               {(current.examples ?? []).slice(0, 1).map((ex: string, i: number) => (
