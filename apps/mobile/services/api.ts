@@ -133,6 +133,7 @@ export const vocabularyApi = {
     api.get<{ definition: string; definitionTr: string; phonetic: string; examples: string[]; synonyms: string[] }>(`/vocabulary/${wordId}/explain`, { params: { context } }),
   addWord: (data: { word: string; definition: string; definitionTr: string; examples?: string[]; phonetic?: string; level: string }) =>
     api.post<UserWord>('/vocabulary/add', data),
+  saveWord: (word: string) => api.post<UserWord>('/vocabulary/save', { word }),
 };
 
 export const roleplayApi = {

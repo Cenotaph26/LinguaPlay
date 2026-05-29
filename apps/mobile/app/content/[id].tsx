@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,11 +9,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { contentApi, vocabularyApi } from '../../services/api';
 
-const TABS = ['Kelimeler', 'İfadeler', 'Transkript'] as const;
+const TABS = ['Kelimeler', 'İfadeler', 'Transkript', 'Flashcard'] as const;
 
 export default function ContentDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [tab, setTab] = useState<typeof TABS[number]>('Kelimeler');
+  const [flashcardIndex, setFlashcardIndex] = useState(0);
+  const [flashRevealed, setFlashRevealed] = useState(false);
+  const [flashAdded, setFlashAdded] = useState<Record<string, boolean>>({});
 
   const { data: item, isLoading } = useQuery({
     queryKey: ['content-detail', id],
@@ -77,7 +80,7 @@ export default function ContentDetail() {
         {TABS.map((t) => (
           <TouchableOpacity
             key={t}
-            onPress={() => setTab(t)}
+            onPress={() => { setTab(t); if (t === 'Flashcard') { setFlashcardIndex(0); setFlashRevealed(false); } }}
             style={{
               paddingHorizontal: 16,
               paddingVertical: 7,
@@ -152,6 +155,103 @@ export default function ContentDetail() {
             {item.transcript || 'Transkript mevcut değil'}
           </Text>
         )}
+
+        {tab === 'Flashcard' && (() => {
+          const cards = item.words;
+          if (cards.length === 0) {
+            return (
+              <View style={{ alignItems: 'center', paddingTop: 60 }}>
+                <Ionicons name="layers-outline" size={48} color="#E4E1F5" />
+                <Text style={{ color: '#9B94CC', marginTop: 12, fontSize: 14 }}>Flashcard için kelime yok</Text>
+              </View>
+            );
+          }
+          if (flashcardIndex >= cards.length) {
+            return (
+              <View style={{ alignItems: 'center', paddingTop: 60 }}>
+                <Text style={{ fontSize: 36, marginBottom: 12 }}>🎉</Text>
+                <Text style={{ color: '#110D24', fontWeight: '700', fontSize: 18, marginBottom: 6 }}>Tamamlandı!</Text>
+                <Text style={{ color: '#9B94CC', fontSize: 14, marginBottom: 24, textAlign: 'center' }}>{cards.length} kelimeyi gözden geçirdin</Text>
+                <TouchableOpacity
+                  onPress={() => { setFlashcardIndex(0); setFlashRevealed(false); }}
+                  style={{ backgroundColor: '#7355F7', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>Yeniden Başla</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }
+          const card = cards[flashcardIndex];
+          const isAdded = flashAdded[card.id];
+          return (
+            <View style={{ alignItems: 'center', gap: 16 }}>
+              {/* Progress */}
+              <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <View style={{ flex: 1, height: 4, backgroundColor: '#F0EEF9', borderRadius: 4, overflow: 'hidden' }}>
+                  <View style={{ width: `${(flashcardIndex / cards.length) * 100}%`, height: 4, backgroundColor: '#7355F7', borderRadius: 4 }} />
+                </View>
+                <Text style={{ color: '#9B94CC', fontSize: 12 }}>{flashcardIndex + 1}/{cards.length}</Text>
+              </View>
+
+              {/* Card */}
+              <TouchableOpacity
+                onPress={() => setFlashRevealed((r) => !r)}
+                activeOpacity={0.85}
+                style={{ width: '100%', backgroundColor: '#ffffff', borderRadius: 20, padding: 28, borderWidth: 1, borderColor: '#E4E1F5', alignItems: 'center', minHeight: 200, justifyContent: 'center', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.10, shadowRadius: 14, elevation: 5 }}
+              >
+                {!flashRevealed ? (
+                  <>
+                    <Text style={{ color: '#9B94CC', fontSize: 11, fontWeight: '600', letterSpacing: 0.7, marginBottom: 14 }}>KELIME</Text>
+                    <Text style={{ color: '#110D24', fontSize: 28, fontWeight: '700', textAlign: 'center' }}>{card.word.word}</Text>
+                    {card.word.phonetic && (
+                      <Text style={{ color: '#9B94CC', fontSize: 13, fontStyle: 'italic', marginTop: 6 }}>{card.word.phonetic}</Text>
+                    )}
+                    <Text style={{ color: '#C4C0E0', fontSize: 12, marginTop: 20 }}>Cevabı görmek için dokun</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={{ color: '#9B94CC', fontSize: 11, fontWeight: '600', letterSpacing: 0.7, marginBottom: 14 }}>ANLAM</Text>
+                    <Text style={{ color: '#110D24', fontSize: 16, fontWeight: '600', textAlign: 'center', marginBottom: 6 }}>{card.word.definition}</Text>
+                    <Text style={{ color: '#7355F7', fontSize: 14, textAlign: 'center', marginBottom: 12 }}>{card.word.definitionTr}</Text>
+                    {card.contexts[0] && (
+                      <View style={{ borderLeftWidth: 2, borderLeftColor: '#E4E1F5', paddingLeft: 10 }}>
+                        <Text style={{ color: '#9B94CC', fontSize: 12, fontStyle: 'italic' }}>"{card.contexts[0]}"</Text>
+                      </View>
+                    )}
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Action buttons */}
+              <View style={{ flexDirection: 'row', width: '100%', gap: 10 }}>
+                {isAdded ? (
+                  <View style={{ flex: 1, backgroundColor: 'rgba(14,158,128,0.08)', borderRadius: 12, paddingVertical: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(14,158,128,0.20)' }}>
+                    <Ionicons name="checkmark-circle" size={16} color="#0E9E80" />
+                    <Text style={{ color: '#0E9E80', fontWeight: '600', fontSize: 13 }}>Eklendi</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => {
+                      addWordMutation.mutate({ word: card.word.word, definition: card.word.definition, definitionTr: card.word.definitionTr, level: card.word.level, examples: card.word.examples });
+                      setFlashAdded((s) => ({ ...s, [card.id]: true }));
+                    }}
+                    style={{ flex: 1, backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 12, paddingVertical: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(115,85,247,0.20)' }}
+                  >
+                    <Ionicons name="add-circle-outline" size={16} color="#7355F7" />
+                    <Text style={{ color: '#7355F7', fontWeight: '600', fontSize: 13 }}>Kelime Listeme Ekle</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={() => { setFlashcardIndex((i) => i + 1); setFlashRevealed(false); }}
+                  style={{ flex: 1, backgroundColor: '#7355F7', borderRadius: 12, paddingVertical: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>İleri</Text>
+                  <Ionicons name="arrow-forward" size={16} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        })()}
       </ScrollView>
     </SafeAreaView>
   );
