@@ -131,6 +131,25 @@ router.post('/add', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Save a word by name only (for roleplay discovered words already in DB)
+router.post('/save', async (req: AuthRequest, res: Response) => {
+  try {
+    const { word } = req.body as { word?: string };
+    if (!word) { res.status(400).json({ error: 'word gerekli' }); return; }
+    const dbWord = await prisma.word.findFirst({ where: { word: word.toLowerCase() } });
+    if (!dbWord) { res.status(404).json({ error: 'Kelime veritabanında bulunamadı' }); return; }
+    const userWord = await prisma.userWord.upsert({
+      where: { userId_wordId: { userId: req.userId, wordId: dbWord.id } },
+      create: { userId: req.userId, wordId: dbWord.id },
+      update: {},
+    });
+    res.json({ ...dbWord, userWord });
+  } catch (err) {
+    console.error('[vocabulary/save]', err);
+    res.status(500).json({ error: 'Kelime kaydedilemedi' });
+  }
+});
+
 router.get('/:wordId/explain', requireApiKey, async (req: AuthRequest, res: Response) => {
   try {
     const { wordId } = req.params;
