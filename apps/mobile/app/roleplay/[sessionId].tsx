@@ -219,7 +219,9 @@ export default function RoleplayChat() {
                 <View
                   style={{
                     maxWidth: '80%',
-                    backgroundColor: msg.role === 'user' ? '#6366f1' : '#18181b',
+                    backgroundColor: msg.role === 'user' ? 'rgba(99,102,241,0.12)' : '#27272a',
+                    borderWidth: 1,
+                    borderColor: msg.role === 'user' ? 'rgba(99,102,241,0.30)' : 'rgba(255,255,255,0.07)',
                     borderRadius: 16,
                     borderBottomRightRadius: msg.role === 'user' ? 4 : 16,
                     borderBottomLeftRadius: msg.role === 'user' ? 16 : 4,

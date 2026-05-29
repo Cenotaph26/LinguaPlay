@@ -110,19 +110,21 @@ export default function Profile() {
         {/* User Card */}
         <View className="bg-bg2 border border-border rounded-2xl p-4 mb-4">
           <View className="flex-row items-center" style={{ gap: 12 }}>
-            <View style={{ backgroundColor: '#6366f122', borderRadius: 9999, width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="person" size={26} color="#6366f1" />
+            <View style={{ backgroundColor: '#6366f1', borderRadius: 9999, width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>
+                {(user?.email ?? 'U').slice(0, 2).toUpperCase()}
+              </Text>
             </View>
             <View className="flex-1">
               <Text className="text-text1 font-semibold" numberOfLines={1}>{user?.email ?? '—'}</Text>
-              <View className="flex-row items-center mt-1" style={{ gap: 8 }}>
-                <View style={{ backgroundColor: '#6366f122', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                  <Text style={{ color: '#818cf8', fontWeight: '600', fontSize: 12 }}>
-                    {user?.level === 'UNSET' ? 'Seviye belirlenmedi' : user?.level}
+              <View className="flex-row items-center mt-1" style={{ gap: 6 }}>
+                <View style={{ backgroundColor: 'rgba(99,102,241,0.12)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(99,102,241,0.30)' }}>
+                  <Text style={{ color: '#818cf8', fontWeight: '600', fontSize: 11 }}>
+                    {user?.level === 'UNSET' ? 'Seviye yok' : user?.level}
                   </Text>
                 </View>
                 {hasApiKey && (
-                  <View style={{ backgroundColor: '#22c55e22', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                  <View style={{ backgroundColor: 'rgba(34,197,94,0.10)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(34,197,94,0.25)' }}>
                     <Text style={{ color: '#22c55e', fontSize: 10, fontWeight: '600' }}>API Aktif</Text>
                   </View>
                 )}
