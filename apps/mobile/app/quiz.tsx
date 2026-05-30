@@ -164,7 +164,7 @@ export default function Quiz() {
                 <Text style={{ color: '#110D24', fontSize: 15, flex: 1, lineHeight: 22 }}>{q.question}</Text>
               </View>
 
-              {q.type === 'multiple_choice' && q.options ? (
+              {(q.type === 'multiple_choice' || q.type === 'context_match') && q.options ? (
                 <View style={{ gap: 8 }}>
                   {q.options.map((opt) => (
                     <TouchableOpacity

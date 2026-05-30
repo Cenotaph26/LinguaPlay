@@ -82,7 +82,7 @@ export interface RolePlaySession {
 
 export interface QuizQuestion {
   id: number;
-  type: 'multiple_choice' | 'fill_blank' | 'translation';
+  type: 'multiple_choice' | 'fill_blank' | 'translation' | 'context_match';
   question: string;
   options?: string[];
   correctAnswer: string;
