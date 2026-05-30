@@ -212,12 +212,30 @@ const STATIC_DIALOGUES: Record<string, StaticDialogue> = {
   },
 };
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  daily: '☕', work: '💼', travel: '✈️', emergency: '🏥', social: '💬', shopping: '🛍️',
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const SCENE_ICONS: Record<string, IconName> = {
+  'Ordering Coffee':       'cafe-outline',
+  'Job Interview':         'briefcase-outline',
+  'Airport Check-in':      'airplane-outline',
+  'Doctor Visit':          'medkit-outline',
+  'Shopping Return':       'bag-outline',
+  'Making New Friends':    'people-outline',
+  'Asking for Directions': 'navigate-outline',
+  'Business Meeting':      'business-outline',
 };
 
 const LEVEL_COLORS: Record<string, string> = {
   A1: '#0E9E80', A2: '#0E9E80', B1: '#7355F7', B2: '#7355F7', C1: '#F59E0B', C2: '#F59E0B',
+};
+
+const CAT_COLORS: Record<string, [string, string]> = {
+  daily:     ['#FCD34D', '#F59E0B'],
+  work:      ['#A48FFF', '#7355F7'],
+  travel:    ['#3DD1AE', '#0E9E80'],
+  emergency: ['#FF8A6E', '#E84E32'],
+  social:    ['#A48FFF', '#7355F7'],
+  shopping:  ['#3DD1AE', '#0E9E80'],
 };
 
 export default function StaticDialogue() {
@@ -264,22 +282,27 @@ export default function StaticDialogue() {
   }
 
   const lc = LEVEL_COLORS[scene.difficulty] ?? '#9B94CC';
+  const catColor = CAT_COLORS[scene.category]?.[1] ?? '#7355F7';
+  const sceneIcon = SCENE_ICONS[scene.titleEn] ?? 'chatbubble-outline';
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#E4E1F5' }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12, padding: 4 }}>
-          <Ionicons name="arrow-back" size={22} color="#110D24" />
+      {/* Gradient Header */}
+      <View style={{ backgroundColor: catColor, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 18, position: 'relative', overflow: 'hidden' }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 16, alignSelf: 'flex-start', padding: 4 }}>
+          <Ionicons name="arrow-back" size={22} color="rgba(255,255,255,0.85)" />
         </TouchableOpacity>
-        <Text style={{ fontSize: 18 }}>{CATEGORY_EMOJI[scene.category] ?? '💬'}</Text>
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={{ color: '#110D24', fontWeight: '700', fontSize: 15 }} numberOfLines={1}>{scene.titleTr}</Text>
-          <Text style={{ color: '#9B94CC', fontSize: 11 }}>{dialogue.aiName}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name={sceneIcon} size={24} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', lineHeight: 24 }}>{scene.titleTr}</Text>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>{dialogue.aiName} · {scene.difficulty}</Text>
+          </View>
         </View>
-        <View style={{ backgroundColor: lc + '1a', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: lc + '40' }}>
-          <Text style={{ color: lc, fontSize: 11, fontWeight: '700' }}>{scene.difficulty}</Text>
-        </View>
+        {/* Watermark */}
+        <Text style={{ position: 'absolute', right: -8, bottom: -14, fontSize: 70, fontWeight: '800', color: 'rgba(255,255,255,0.06)', lineHeight: 70 }}>{scene.difficulty}</Text>
       </View>
 
       <View style={{ flex: 1 }}>

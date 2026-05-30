@@ -7,7 +7,7 @@ const TABS: Array<{ name: string; title: string; icon: IconName; activeIcon: Ico
   { name: 'index', title: 'Ana Sayfa', icon: 'home-outline', activeIcon: 'home' },
   { name: 'vocabulary', title: 'Kelimeler', icon: 'book-outline', activeIcon: 'book' },
   { name: 'roleplay', title: 'Konuşma', icon: 'chatbubbles-outline', activeIcon: 'chatbubbles' },
-  { name: 'content', title: 'İçerik', icon: 'play-circle-outline', activeIcon: 'play-circle' },
+  { name: 'reading', title: 'Okuma', icon: 'document-text-outline', activeIcon: 'document-text' },
   { name: 'profile', title: 'Profil', icon: 'person-outline', activeIcon: 'person' },
 ];
 
@@ -40,6 +40,11 @@ export default function TabsLayout() {
           }}
         />
       ))}
+      {/* Content tab — hidden from bar, still navigable via router.push */}
+      <Tabs.Screen
+        name="content"
+        options={{ title: 'İçerik', href: null }}
+      />
     </Tabs>
   );
 }

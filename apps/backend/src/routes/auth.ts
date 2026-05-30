@@ -12,15 +12,19 @@ const USER_SELECT = {
   level: true,
   uiLanguage: true,
   apiKeyEnc: true,
+  aiProvider: true,
+  onboardingDone: true,
 } as const;
 
-function userPayload(user: { id: string; email: string; level: string; uiLanguage: string; apiKeyEnc: string | null }) {
+function userPayload(user: { id: string; email: string; level: string; uiLanguage: string; apiKeyEnc: string | null; aiProvider: string | null; onboardingDone: boolean }) {
   return {
     id: user.id,
     email: user.email,
     level: user.level,
     uiLanguage: user.uiLanguage,
     hasApiKey: !!user.apiKeyEnc,
+    aiProvider: user.aiProvider,
+    onboardingDone: user.onboardingDone,
   };
 }
 
@@ -90,6 +94,20 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
   } catch (err) {
     console.error('[auth/me]', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Mark onboarding as done without adding API key
+router.post('/skip-api-key', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.userId },
+      data: { onboardingDone: true },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[auth/skip-api-key]', err);
+    res.status(500).json({ error: 'Güncellenemedi' });
   }
 });
 

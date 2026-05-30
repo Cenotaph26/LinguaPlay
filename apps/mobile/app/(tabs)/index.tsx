@@ -20,9 +20,9 @@ const LEVEL_XP: Record<string, { name: string; min: number; max: number }> = {
 
 const QUICK_ACTIONS: Array<{ label: string; sub: string; icon: IconName; route: string; color: string }> = [
   { label: 'Role-play',   sub: 'Sahne seç veya yaz', icon: 'chatbubbles-outline',  route: '/(tabs)/roleplay', color: '#7355F7' },
-  { label: 'İçerik Ekle', sub: 'Video · PDF · dizi',  icon: 'play-circle-outline', route: '/(tabs)/content',  color: '#F59E0B' },
+  { label: 'İçerik',      sub: 'Video · PDF · dizi',  icon: 'play-circle-outline', route: '/(tabs)/content',  color: '#F59E0B' },
   { label: 'Quiz',        sub: '10 soruluk test',      icon: 'help-circle-outline', route: '/quiz',           color: '#0E9E80' },
-  { label: 'Tekrar',      sub: 'Günlük SRS tekrarı',   icon: 'refresh-outline',     route: '/review',         color: '#7355F7' },
+  { label: 'Sesli',       sub: 'Whisper AI',           icon: 'mic-outline',         route: '/quiz',           color: '#F59E0B' },
 ];
 
 export default function Dashboard() {
@@ -77,35 +77,41 @@ export default function Dashboard() {
           </View>
         </View>
 
-        {/* Level + XP Card */}
+        {/* Level Hero Card */}
         {user?.level && user.level !== 'UNSET' && (
-          <View style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <View>
-                <Text style={{ color: '#9B94CC', fontSize: 11, fontWeight: '600', letterSpacing: 0.5 }}>SEVİYE</Text>
-                <Text style={{ color: '#110D24', fontSize: 22, fontWeight: '800', marginTop: 1 }}>{user.level}</Text>
-                <Text style={{ color: '#6B638F', fontSize: 12 }}>{levelInfo.name}</Text>
+          <>
+            <View style={{ backgroundColor: '#7355F7', borderRadius: 20, padding: 20, marginBottom: 10, position: 'relative', overflow: 'hidden', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.32, shadowRadius: 28, elevation: 8 }}>
+              <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>Seviye</Text>
+              <Text style={{ fontSize: 40, fontWeight: '800', color: '#fff', lineHeight: 44 }}>{user.level}</Text>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginBottom: 14, marginTop: 2 }}>{levelInfo.name} · {xp.toLocaleString()} XP</Text>
+              <View style={{ height: 5, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 100, overflow: 'hidden' }}>
+                <View style={{ height: 5, width: `${xpPct * 100}%`, backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: 100 }} />
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ color: '#9B94CC', fontSize: 11, fontWeight: '600', letterSpacing: 0.5 }}>TOPLAM XP</Text>
-                <Text style={{ color: '#7355F7', fontSize: 22, fontWeight: '800', marginTop: 1 }}>{xp.toLocaleString()}</Text>
-                <Text style={{ color: '#6B638F', fontSize: 12 }}>{xpInLevel}/{xpNeeded} sonraki seviye</Text>
+              {/* Watermark */}
+              <Text style={{ position: 'absolute', right: -10, bottom: -8, fontSize: 80, fontWeight: '800', color: 'rgba(255,255,255,0.06)', lineHeight: 88 }}>{user.level}</Text>
+            </View>
+
+            {/* XP Sub-card */}
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={{ color: '#110D24', fontSize: 13, fontWeight: '600' }}>Seviye {user.level} — XP</Text>
+                <Text style={{ color: '#7355F7', fontSize: 12, fontWeight: '700' }}>+{xpNeeded - xpInLevel} SONRAKI</Text>
               </View>
+              <View style={{ height: 6, backgroundColor: '#F0EEF9', borderRadius: 100, overflow: 'hidden' }}>
+                <View style={{ height: 6, width: `${xpPct * 100}%`, backgroundColor: '#7355F7', borderRadius: 100 }} />
+              </View>
+              {!user.hasApiKey && (
+                <TouchableOpacity
+                  onPress={() => router.push('/(tabs)/profile')}
+                  style={{ marginTop: 10, backgroundColor: 'rgba(245,158,11,0.10)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                >
+                  <Ionicons name="sparkles-outline" size={14} color="#F59E0B" />
+                  <Text style={{ color: '#F59E0B', fontWeight: '600', fontSize: 12, flex: 1 }}>API key ekle → AI özellikleri aktif olsun</Text>
+                  <Ionicons name="chevron-forward" size={14} color="#F59E0B" />
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={{ height: 8, backgroundColor: '#F0EEF9', borderRadius: 4, overflow: 'hidden' }}>
-              <View style={{ width: `${xpPct * 100}%`, height: 8, backgroundColor: '#7355F7', borderRadius: 4 }} />
-            </View>
-            {!user.hasApiKey && (
-              <TouchableOpacity
-                onPress={() => router.push('/(tabs)/profile')}
-                style={{ marginTop: 10, backgroundColor: 'rgba(245,158,11,0.10)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 6 }}
-              >
-                <Ionicons name="sparkles-outline" size={14} color="#F59E0B" />
-                <Text style={{ color: '#F59E0B', fontWeight: '600', fontSize: 12, flex: 1 }}>API key ekle → AI özellikleri aktif olsun</Text>
-                <Ionicons name="chevron-forward" size={14} color="#F59E0B" />
-              </TouchableOpacity>
-            )}
-          </View>
+          </>
         )}
 
         {user?.level === 'UNSET' && (

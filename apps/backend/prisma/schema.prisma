@@ -11,22 +11,31 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
+  id             String      @id @default(cuid())
+  email          String      @unique
   passwordHash   String
   apiKeyEnc      String?
-  level          Level     @default(UNSET)
-  uiLanguage     String    @default("tr")
-  xp             Int       @default(0)
-  streak         Int       @default(0)
+  level          Level       @default(UNSET)
+  uiLanguage     String      @default("tr")
+  xp             Int         @default(0)
+  streak         Int         @default(0)
   lastActiveDate DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  aiProvider     AIProvider?
+  onboardingDone Boolean     @default(false)
 
   words         UserWord[]
   sessions      RolePlaySession[]
   contentItems  ContentItem[]
   quizResults   QuizResult[]
+  badges        UserBadge[]
+  textProgress  UserTextProgress[]
+}
+
+enum AIProvider {
+  GEMINI
+  CLAUDE
 }
 
 enum Level {
@@ -48,9 +57,24 @@ model Word {
   phonetic      String?
   audioUrl      String?
   level         Level
+  partOfSpeech  String?
+  synonyms      String[] @default([])
+  collocations  String[] @default([])
+  themeId       String?
 
+  theme         WordTheme?    @relation(fields: [themeId], references: [id])
   userWords     UserWord[]
   contentWords  ContentWord[]
+}
+
+model WordTheme {
+  id        String @id @default(cuid())
+  key       String @unique
+  nameEn    String
+  nameTr    String
+  emoji     String
+  wordCount Int    @default(0)
+  words     Word[]
 }
 
 model UserWord {
@@ -92,6 +116,8 @@ model RolePlayScene {
   createdAt     DateTime @default(now())
 
   sessions      RolePlaySession[]
+
+  @@unique([titleEn])
 }
 
 model RolePlaySession {
@@ -102,6 +128,7 @@ model RolePlaySession {
   messages      Json
   feedback      String?
   wordsUsed     String[]
+  xpEarned      Int      @default(0)
   createdAt     DateTime @default(now())
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -174,4 +201,57 @@ model QuizResult {
   createdAt     DateTime @default(now())
 
   user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Badge {
+  id            String      @id @default(cuid())
+  key           String      @unique
+  nameEn        String
+  nameTr        String
+  descriptionTr String
+  emoji         String
+  xpReward      Int         @default(0)
+  condition     Json
+  userBadges    UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge    Badge    @relation(fields: [badgeId], references: [id])
+  @@unique([userId, badgeId])
+}
+
+model ReadingText {
+  id              String   @id @default(cuid())
+  title           String
+  level           Level
+  category        String   // news | story | article | dialogue | science | business
+  text            String
+  wordCount       Int
+  readingTimeMin  Int
+  audioUrl        String?
+  keyPhrases      Json     // [{phrase: string, tr: string}]
+  comprehensionQs Json     // [{question: string, options: string[], answerIndex: number}]
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  userProgress UserTextProgress[]
+
+  @@unique([title])
+}
+
+model UserTextProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  textId    String
+  completed Boolean  @default(false)
+  score     Int?
+  readAt    DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      ReadingText @relation(fields: [textId], references: [id])
+  @@unique([userId, textId])
 }
