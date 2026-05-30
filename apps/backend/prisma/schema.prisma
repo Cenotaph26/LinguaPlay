@@ -240,6 +240,8 @@ model ReadingText {
   createdAt       DateTime @default(now())
 
   userProgress UserTextProgress[]
+
+  @@unique([title])
 }
 
 model UserTextProgress {
