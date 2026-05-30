@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert,
+  TextInput, ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/authStore';
 import { profileApi } from '../../services/api';
 import i18n from '../../utils/i18n';
+import * as Notifications from 'expo-notifications';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: false,
+    shouldSetBadge: true,
+  }),
+});
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -38,6 +47,7 @@ export default function Profile() {
   const { user, setUser, logout } = useAuthStore();
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
+  const [notifTime, setNotifTime] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState(false);
   const [testingKey, setTestingKey] = useState(false);
   const [deletingKey, setDeletingKey] = useState(false);
@@ -122,6 +132,33 @@ export default function Profile() {
     } finally {
       setChangingLang(false);
     }
+  }
+
+  async function scheduleReminder(time: string) {
+    const [hour, minute] = time.split(':').map(Number);
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin Gerekli', 'Bildirim izni verilmedi. Ayarlardan açabilirsiniz.');
+      return;
+    }
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    if (Platform.OS !== 'web') {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Kelime tekrar zamanı!',
+          body: 'Bugünkü kelimelerini tekrar etmeyi unutma.',
+          data: { screen: 'review' },
+        },
+        trigger: { hour, minute, repeats: true } as any,
+      });
+    }
+    setNotifTime(time);
+    Alert.alert('Hatırlatıcı Kuruldu', `Her gün ${time}'de hatırlatıcı alacaksın.`);
+  }
+
+  async function cancelReminder() {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    setNotifTime(null);
   }
 
   function handleLanguageTap() {
@@ -275,8 +312,16 @@ export default function Profile() {
             <SettingRow
               icon="notifications-outline"
               label="Hatırlatıcılar"
-              value="09:00"
-              onPress={() => Alert.alert('Yakında', 'Bildirim ayarları yakında geliyor.')}
+              value={notifTime ?? 'Kapalı'}
+              onPress={async () => {
+                const TIMES = ['08:00', '09:00', '12:00', '18:00', '21:00'];
+                const options = [
+                  ...TIMES.map((t) => ({ text: t, onPress: () => scheduleReminder(t) })),
+                  { text: 'Bildirimi Kapat', style: 'destructive' as const, onPress: cancelReminder },
+                  { text: 'İptal', style: 'cancel' as const },
+                ];
+                Alert.alert('Günlük Hatırlatıcı', 'Tekrar hatırlatma saatini seç', options);
+              }}
             />
             <SettingRow
               icon="clipboard-outline"

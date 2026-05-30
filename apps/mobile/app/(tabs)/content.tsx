@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { contentApi, ContentItem } from '../../services/api';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -38,7 +40,34 @@ export default function Content() {
   const [addModal, setAddModal] = useState(false);
   const [selectedType, setSelectedType] = useState('YOUTUBE');
   const [inputText, setInputText] = useState('');
+  const [pickedFile, setPickedFile] = useState<{ name: string; base64: string } | null>(null);
+  const [pickingFile, setPickingFile] = useState(false);
   const queryClient = useQueryClient();
+
+  const isFilePicker = selectedType === 'PDF' || selectedType === 'SUBTITLE';
+
+  async function handlePickFile() {
+    setPickingFile(true);
+    try {
+      const mimeTypes = selectedType === 'PDF'
+        ? ['application/pdf']
+        : ['application/x-subrip', 'text/plain', 'application/octet-stream'];
+      const result = await DocumentPicker.getDocumentAsync({
+        type: mimeTypes,
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      setPickedFile({ name: asset.name, base64 });
+    } catch {
+      Alert.alert('Hata', 'Dosya okunamadı');
+    } finally {
+      setPickingFile(false);
+    }
+  }
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['content-list'],
@@ -75,18 +104,25 @@ export default function Content() {
   function openModal(type: string) {
     setSelectedType(type);
     setInputText('');
+    setPickedFile(null);
     setAddModal(true);
   }
 
   function handleAdd() {
-    if (!inputText.trim()) return;
-    const isText = selectedType === 'SUBTITLE' || selectedType === 'PDF';
-    addMutation.mutate(
-      isText
-        ? { type: selectedType, transcript: inputText.trim(), title: selectedType === 'PDF' ? 'PDF' : 'Altyazı' }
-        : { type: selectedType, url: inputText.trim() }
-    );
+    if (isFilePicker) {
+      if (!pickedFile) return;
+      addMutation.mutate({
+        type: selectedType,
+        fileBase64: pickedFile.base64,
+        fileName: pickedFile.name,
+      } as any);
+    } else {
+      if (!inputText.trim()) return;
+      addMutation.mutate({ type: selectedType, url: inputText.trim() });
+    }
   }
+
+  const canSubmit = isFilePicker ? !!pickedFile : !!inputText.trim();
 
   const currentSource = SOURCE_TYPES.find((s) => s.type === selectedType)!;
 
@@ -228,31 +264,55 @@ export default function Content() {
               ))}
             </View>
 
-            <TextInput
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder={currentSource.placeholder}
-              placeholderTextColor="#9B94CC"
-              multiline={currentSource.multiline}
-              numberOfLines={currentSource.multiline ? 4 : 1}
-              style={{ backgroundColor: '#F0EEF9', borderRadius: 12, padding: 12, color: '#110D24', fontSize: 14, minHeight: currentSource.multiline ? 100 : 48, marginBottom: 16, textAlignVertical: currentSource.multiline ? 'top' : 'center' }}
-            />
+            {isFilePicker ? (
+              <TouchableOpacity
+                onPress={handlePickFile}
+                disabled={pickingFile}
+                style={{ backgroundColor: '#F0EEF9', borderRadius: 12, padding: 16, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: pickedFile ? '#7355F7' : '#E4E1F5', gap: 8 }}
+              >
+                {pickingFile ? (
+                  <ActivityIndicator color="#7355F7" />
+                ) : pickedFile ? (
+                  <>
+                    <Ionicons name="checkmark-circle" size={28} color="#0E9E80" />
+                    <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 13, textAlign: 'center' }} numberOfLines={2}>{pickedFile.name}</Text>
+                    <Text style={{ color: '#9B94CC', fontSize: 11 }}>Farklı dosya seçmek için tekrar dokun</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name={currentSource.icon} size={28} color="#9B94CC" />
+                    <Text style={{ color: '#6B638F', fontWeight: '600', fontSize: 13 }}>
+                      {selectedType === 'PDF' ? 'PDF Seç' : '.srt / .vtt Dosyası Seç'}
+                    </Text>
+                    <Text style={{ color: '#9B94CC', fontSize: 11 }}>Dosya yöneticisinden seç</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TextInput
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder={currentSource.placeholder}
+                placeholderTextColor="#9B94CC"
+                style={{ backgroundColor: '#F0EEF9', borderRadius: 12, padding: 12, color: '#110D24', fontSize: 14, minHeight: 48, marginBottom: 16 }}
+              />
+            )}
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
-                onPress={() => { setAddModal(false); setInputText(''); }}
+                onPress={() => { setAddModal(false); setInputText(''); setPickedFile(null); }}
                 style={{ flex: 1, backgroundColor: '#F0EEF9', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
               >
                 <Text style={{ color: '#6B638F', fontWeight: '600' }}>İptal</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAdd}
-                disabled={!inputText.trim() || addMutation.isPending}
-                style={{ flex: 1, backgroundColor: inputText.trim() ? '#7355F7' : '#E4E1F5', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
+                disabled={!canSubmit || addMutation.isPending}
+                style={{ flex: 1, backgroundColor: canSubmit ? '#7355F7' : '#E4E1F5', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
               >
                 {addMutation.isPending
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={{ color: inputText.trim() ? '#fff' : '#9B94CC', fontWeight: '600' }}>Analiz Et ✨</Text>
+                  : <Text style={{ color: canSubmit ? '#fff' : '#9B94CC', fontWeight: '600' }}>Analiz Et ✨</Text>
                 }
               </TouchableOpacity>
             </View>

@@ -152,7 +152,7 @@ export const roleplayApi = {
 };
 
 export const contentApi = {
-  addContent: (data: { type: string; url?: string; title?: string; transcript?: string }) =>
+  addContent: (data: { type: string; url?: string; title?: string; transcript?: string; fileBase64?: string; fileName?: string }) =>
     api.post<ContentItem>('/content', data),
   getContent: () => api.get<ContentItem[]>('/content'),
   getContentById: (id: string) => api.get<ContentDetail>(`/content/${id}`),
