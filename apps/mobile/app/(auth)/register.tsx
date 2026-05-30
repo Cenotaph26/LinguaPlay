@@ -31,7 +31,8 @@ export default function Register() {
       const res = await authApi.register(email, password);
       await setToken(res.data.token);
       setUser(res.data.user);
-      router.replace('/(tabs)/');
+      // New users: always show onboarding (no API key, level UNSET)
+      router.replace('/onboarding' as any);
     } catch (e: any) {
       setError(e.response?.data?.error ?? 'Kayıt başarısız');
     } finally {

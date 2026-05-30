@@ -28,7 +28,11 @@ export default function Login() {
       const res = await authApi.login(email, password);
       await setToken(res.data.token);
       setUser(res.data.user);
-      router.replace('/(tabs)/');
+      if (!res.data.user.hasApiKey && res.data.user.level === 'UNSET') {
+        router.replace('/onboarding' as any);
+      } else {
+        router.replace('/(tabs)/');
+      }
     } catch (e: any) {
       setError(e.response?.data?.error ?? 'Giriş başarısız');
     } finally {

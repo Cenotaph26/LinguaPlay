@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Pre
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { vocabularyApi, UserWord } from '../../services/api';
+import { vocabularyApi, profileApi, UserWord } from '../../services/api';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -61,6 +61,15 @@ export default function Vocabulary() {
     queryFn: () => vocabularyApi.getWords(listFilter && listFilter !== 'TODAY' ? { status: listFilter } : {}).then((r) => r.data),
     staleTime: 30000,
   });
+
+  const { data: stats } = useQuery({
+    queryKey: ['profile-stats'],
+    queryFn: () => profileApi.getStats().then((r) => r.data),
+    staleTime: 60000,
+  });
+
+  const wordCount = stats?.wordCount ?? 0;
+  const streak = stats?.streak ?? 0;
 
   const reviewMutation = useMutation({
     mutationFn: ({ userWordId, quality }: { userWordId: string; quality: 0 | 1 | 2 | 3 }) =>
@@ -309,23 +318,27 @@ export default function Vocabulary() {
 
                   {/* SRS Card */}
                   {current && (
-                    <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 18, marginBottom: 10, borderWidth: 1, borderColor: '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 3, position: 'relative' }}>
+                    <View style={{ backgroundColor: '#7355F7', borderRadius: 20, padding: 22, marginBottom: 10, position: 'relative', overflow: 'hidden', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.32, shadowRadius: 28, elevation: 8 }}>
                       {/* Level badge */}
-                      <View style={{ position: 'absolute', top: 14, right: 14, backgroundColor: (LEVEL_COLORS[current.level] ?? '#9B94CC') + '1a', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: (LEVEL_COLORS[current.level] ?? '#9B94CC') + '40' }}>
-                        <Text style={{ color: LEVEL_COLORS[current.level] ?? '#9B94CC', fontSize: 10, fontWeight: '700' }}>{current.level}</Text>
+                      <View style={{ alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3, marginBottom: 10 }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{current.level}</Text>
                       </View>
 
-                      <Text style={{ fontSize: 26, fontWeight: '700', color: '#110D24', marginBottom: 3, marginRight: 40 }}>{current.word}</Text>
+                      <Text style={{ fontSize: 36, fontWeight: '800', color: '#fff', marginBottom: 3, marginRight: 40 }}>{current.word}</Text>
                       {current.phonetic && (
-                        <Text style={{ fontSize: 12, color: '#6B638F', fontStyle: 'italic', marginBottom: 10 }}>{current.phonetic}</Text>
+                        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: 10 }}>{current.phonetic}</Text>
                       )}
-                      <Text style={{ fontSize: 13, color: '#6B638F', lineHeight: 20, marginBottom: 4 }}>{current.definition}</Text>
-                      <Text style={{ fontSize: 12, color: '#9B94CC', marginBottom: 12 }}>{current.definitionTr}</Text>
+                      <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 20, marginBottom: 4 }}>{current.definition}</Text>
+                      <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>{current.definitionTr}</Text>
                       {current.examples?.[0] && (
-                        <View style={{ borderLeftWidth: 2, borderLeftColor: '#7355F7', paddingLeft: 10, backgroundColor: '#F0EEF9', borderRadius: 6, padding: 10 }}>
-                          <Text style={{ fontSize: 12, color: '#6B638F', fontStyle: 'italic', lineHeight: 18 }}>"{current.examples[0]}"</Text>
+                        <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: 10, borderLeftWidth: 3, borderLeftColor: 'rgba(255,255,255,0.35)' }}>
+                          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.82)', fontStyle: 'italic', lineHeight: 18 }}>"{current.examples[0]}"</Text>
                         </View>
                       )}
+                      {/* Watermark */}
+                      <Text style={{ position: 'absolute', right: -10, bottom: -8, fontSize: 80, fontWeight: '800', color: 'rgba(255,255,255,0.06)', lineHeight: 88 }}>
+                        {current.word.length <= 4 ? current.word : current.word.slice(0, 1).toUpperCase()}
+                      </Text>
                     </View>
                   )}
 
@@ -351,6 +364,25 @@ export default function Vocabulary() {
                   </View>
                 </>
               )}
+
+              {/* Badges */}
+              <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#9B94CC', marginBottom: 8 }}>
+                Rozetler
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                {[
+                  { emoji: '🔥', title: `${streak} Gün`, sub: 'Seri devam ediyor', locked: streak <= 0 },
+                  { emoji: '🎯', title: `${wordCount} Kelime`, sub: '+XP kazandı', locked: false },
+                  { emoji: '🏆', title: '500 Kelime', sub: wordCount >= 500 ? 'Tamamlandı!' : `${500 - wordCount} kaldı`, locked: wordCount < 500 },
+                  { emoji: '👑', title: '30 Gün Seri', sub: streak >= 30 ? 'Tamamlandı!' : `${30 - streak} kaldı`, locked: streak < 30 },
+                ].map((badge, i) => (
+                  <View key={i} style={{ width: '48%', backgroundColor: '#ffffff', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: '#E4E1F5', opacity: badge.locked ? 0.38 : 1, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}>
+                    <Text style={{ fontSize: 24, marginBottom: 6 }}>{badge.emoji}</Text>
+                    <Text style={{ color: '#110D24', fontWeight: '700', fontSize: 13 }}>{badge.title}</Text>
+                    <Text style={{ color: '#9B94CC', fontSize: 11, marginTop: 2 }}>{badge.sub}</Text>
+                  </View>
+                ))}
+              </View>
 
               {/* Son Öğrenilen */}
               <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#9B94CC', marginBottom: 8 }}>

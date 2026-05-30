@@ -21,6 +21,17 @@ const CATEGORY_ICON: Record<string, { icon: IconName; color: string }> = {
   shopping:  { icon: 'bag-outline',       color: '#0E9E80' },
 };
 
+const SCENE_ICONS: Record<string, { icon: IconName; color: string; bg: string }> = {
+  'Ordering Coffee':       { icon: 'cafe-outline',       color: '#F59E0B', bg: 'rgba(245,158,11,0.10)' },
+  'Job Interview':         { icon: 'briefcase-outline',  color: '#7355F7', bg: 'rgba(115,85,247,0.10)' },
+  'Airport Check-in':      { icon: 'airplane-outline',   color: '#0E9E80', bg: 'rgba(14,158,128,0.10)'  },
+  'Doctor Visit':          { icon: 'medkit-outline',     color: '#E84E32', bg: 'rgba(232,78,50,0.10)'   },
+  'Shopping Return':       { icon: 'bag-outline',        color: '#0E9E80', bg: 'rgba(14,158,128,0.10)'  },
+  'Making New Friends':    { icon: 'people-outline',     color: '#7355F7', bg: 'rgba(115,85,247,0.10)' },
+  'Asking for Directions': { icon: 'navigate-outline',   color: '#7355F7', bg: 'rgba(115,85,247,0.10)' },
+  'Business Meeting':      { icon: 'business-outline',   color: '#F59E0B', bg: 'rgba(245,158,11,0.10)' },
+};
+
 const CATEGORY_FILTERS: Array<{ id: string; label: string; icon: IconName }> = [
   { id: 'all',       label: 'Tümü',      icon: 'globe-outline' },
   { id: 'travel',    label: 'Seyahat',   icon: 'airplane-outline' },
@@ -43,6 +54,8 @@ export default function Roleplay() {
   const [customScene, setCustomScene] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sceneModal, setSceneModal] = useState<RolePlayScene | null>(null);
+  const [mode, setMode] = useState<'static' | 'ai'>('static');
+  const [loadingSceneId, setLoadingSceneId] = useState<string | null>(null);
 
   const hasApiKey = user?.hasApiKey ?? false;
 
@@ -61,9 +74,11 @@ export default function Roleplay() {
     onSuccess: (data) => {
       setCustomModal(false);
       setSceneModal(null);
+      setLoadingSceneId(null);
       router.push(`/roleplay/${data.session.id}`);
     },
     onError: (err: any) => {
+      setLoadingSceneId(null);
       if (err.response?.status === 402) {
         Alert.alert('API Anahtarı Gerekli', 'Lütfen önce Profil sayfasından API anahtarınızı ekleyin.', [
           { text: 'Profil', onPress: () => router.push('/(tabs)/profile') },
@@ -76,7 +91,17 @@ export default function Roleplay() {
   });
 
   function handleScenePress(scene: RolePlayScene) {
-    setSceneModal(scene);
+    if (mode === 'static') {
+      router.push(`/roleplay/static/${scene.id}`);
+    } else if (!hasApiKey) {
+      Alert.alert('API Key Gerekli', 'AI ile oynamak için önce Profil sayfasından API key ekle.', [
+        { text: 'Profil', onPress: () => router.push('/(tabs)/profile') },
+        { text: 'İptal' },
+      ]);
+    } else {
+      setLoadingSceneId(scene.id);
+      startMutation.mutate({ sceneId: scene.id });
+    }
   }
 
   function handleStartAI() {
@@ -109,10 +134,36 @@ export default function Roleplay() {
             <Text style={{ fontSize: 12, color: '#9B94CC', marginTop: 2 }}>Gerçek hayat senaryolarını pratik yap</Text>
           </View>
 
+          {/* Mode Toggle */}
+          <View style={{ flexDirection: 'row', marginBottom: 14, backgroundColor: '#F0EEF9', borderRadius: 14, padding: 3 }}>
+            <TouchableOpacity
+              onPress={() => setMode('static')}
+              style={{ flex: 1, paddingVertical: 8, borderRadius: 11, backgroundColor: mode === 'static' ? '#fff' : 'transparent', alignItems: 'center' }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '600', color: mode === 'static' ? '#110D24' : '#6B638F' }}>Diyalog Oku</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setMode('ai')}
+              style={{ flex: 1, paddingVertical: 8, borderRadius: 11, backgroundColor: mode === 'ai' ? '#fff' : 'transparent', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}
+            >
+              <Ionicons name="sparkles-outline" size={12} color={mode === 'ai' ? '#7355F7' : '#6B638F'} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: mode === 'ai' ? '#7355F7' : '#6B638F' }}>AI ile Oyna</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Custom scene */}
           <TouchableOpacity
-            onPress={() => setCustomModal(true)}
-            style={{ marginBottom: 14, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
+            onPress={() => {
+              if (!hasApiKey) {
+                Alert.alert('API Key Gerekli', 'Kendi sahneni yazmak için önce API key ekle.', [
+                  { text: 'Profil', onPress: () => router.push('/(tabs)/profile') },
+                  { text: 'İptal' },
+                ]);
+              } else {
+                setCustomModal(true);
+              }
+            }}
+            style={{ marginBottom: 14, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3, opacity: hasApiKey ? 1 : 0.65 }}
           >
             <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(115,85,247,0.08)', borderWidth: 1, borderColor: 'rgba(115,85,247,0.25)', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="sparkles-outline" size={18} color="#8B6EFF" />
@@ -121,7 +172,10 @@ export default function Roleplay() {
               <Text style={{ color: '#110D24', fontWeight: '500', fontSize: 13 }}>Kendi sahneni yaz</Text>
               <Text style={{ color: '#9B94CC', fontSize: 11, marginTop: 2 }}>AI senaryona göre canlandırır ✨</Text>
             </View>
-            <Ionicons name="chevron-forward" size={17} color="#9B94CC" />
+            {hasApiKey
+              ? <Ionicons name="chevron-forward" size={17} color="#9B94CC" />
+              : <Ionicons name="lock-closed-outline" size={14} color="#9B94CC" />
+            }
           </TouchableOpacity>
 
           {/* Category filters */}
@@ -155,15 +209,20 @@ export default function Roleplay() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {(filteredScenes as RolePlayScene[]).map((scene) => {
                 const lc = LEVEL_COLORS[scene.difficulty] ?? '#9B94CC';
-                const catIcon = CATEGORY_ICON[scene.category] ?? { icon: 'chatbubble-outline' as IconName, color: '#7355F7' };
+                const si = SCENE_ICONS[scene.titleEn] ?? { icon: 'chatbubble-outline' as IconName, color: '#7355F7', bg: 'rgba(115,85,247,0.10)' };
+                const isLoadingThis = loadingSceneId === scene.id;
                 return (
                   <TouchableOpacity
                     key={scene.id}
                     onPress={() => handleScenePress(scene)}
+                    disabled={isLoadingThis}
                     style={{ width: '48.5%', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 14, padding: 14, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
                   >
-                    <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: catIcon.color + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-                      <Ionicons name={catIcon.icon} size={18} color={catIcon.color} />
+                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: si.bg, alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                      {isLoadingThis
+                        ? <ActivityIndicator size="small" color={si.color} />
+                        : <Ionicons name={si.icon} size={22} color={si.color} />
+                      }
                     </View>
                     <Text style={{ fontSize: 13, fontWeight: '600', color: '#110D24', lineHeight: 18, marginBottom: 8, flex: 1 }}>{scene.titleTr}</Text>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -171,14 +230,9 @@ export default function Roleplay() {
                         <Text style={{ color: lc, fontSize: 10, fontWeight: '600' }}>{scene.difficulty}</Text>
                       </View>
                       <View style={{ flexDirection: 'row', gap: 4 }}>
-                        <View style={{ backgroundColor: '#F0EEF9', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3 }}>
-                          <Text style={{ color: '#6B638F', fontSize: 10, fontWeight: '600' }}>Oku</Text>
+                        <View style={{ backgroundColor: mode === 'static' ? '#F0EEF9' : 'rgba(115,85,247,0.10)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3 }}>
+                          <Text style={{ color: mode === 'static' ? '#6B638F' : '#7355F7', fontSize: 10, fontWeight: '600' }}>{mode === 'static' ? 'Oku' : 'AI ✨'}</Text>
                         </View>
-                        {hasApiKey && (
-                          <View style={{ backgroundColor: 'rgba(115,85,247,0.10)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3 }}>
-                            <Text style={{ color: '#7355F7', fontSize: 10, fontWeight: '600' }}>AI ✨</Text>
-                          </View>
-                        )}
                       </View>
                     </View>
                   </TouchableOpacity>
