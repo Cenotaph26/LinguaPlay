@@ -85,18 +85,15 @@ export default function Onboarding() {
 
         {/* Buttons */}
         <TouchableOpacity
-          onPress={() => {
-            router.push('/(tabs)/profile');
-            router.replace('/(tabs)/index' as any);
-          }}
-          style={{ backgroundColor: '#0E9E80', borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginBottom: 10, flexDirection: 'row', justifyContent: 'center', gap: 8, shadowColor: '#0E9E80', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 4 }}
+          onPress={() => router.replace('/(tabs)/profile' as any)}
+          style={{ backgroundColor: '#7355F7', borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginBottom: 10, flexDirection: 'row', justifyContent: 'center', gap: 8, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 }}
         >
-          <Ionicons name="key-outline" size={18} color="#fff" />
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>API Key Ekle</Text>
+          <Ionicons name="sparkles-outline" size={18} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>API Key Ekle → AI Özellikleri Aç</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.replace('/(tabs)/index' as any)}
+          onPress={() => router.replace('/(tabs)/' as any)}
           style={{ borderRadius: 14, paddingVertical: 14, alignItems: 'center', backgroundColor: '#F0EEF9' }}
         >
           <Text style={{ color: '#6B638F', fontWeight: '600', fontSize: 14 }}>Şimdi Değil, Devam Et</Text>
