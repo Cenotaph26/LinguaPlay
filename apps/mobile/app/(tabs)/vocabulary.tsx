@@ -86,6 +86,7 @@ export default function Vocabulary() {
     },
   });
 
+
   const { data: stats } = useQuery({
     queryKey: ['profile-stats'],
     queryFn: () => profileApi.getStats().then((r) => r.data),
