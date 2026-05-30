@@ -1,14 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { roleplayApi, vocabularyApi, BASE_URL } from '../../services/api';
-import { useAuthStore } from '../../stores/authStore';
+import { roleplayApi, vocabularyApi } from '../../services/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -46,6 +45,51 @@ function TappableText({ text, onWordLongPress }: { text: string; onWordLongPress
         );
       })}
     </Text>
+  );
+}
+
+function TypingIndicator() {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const anim = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+          Animated.delay(600 - delay),
+        ])
+      );
+    const a1 = anim(dot1, 0);
+    const a2 = anim(dot2, 200);
+    const a3 = anim(dot3, 400);
+    a1.start(); a2.start(); a3.start();
+    return () => { a1.stop(); a2.stop(); a3.stop(); };
+  }, []);
+
+  const dot = (animated: Animated.Value) => (
+    <Animated.View
+      style={{
+        width: 7, height: 7, borderRadius: 4, backgroundColor: '#7355F7',
+        opacity: animated.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+        transform: [{ translateY: animated.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }],
+      }}
+    />
+  );
+
+  return (
+    <View style={{ alignItems: 'flex-start', marginBottom: 8 }}>
+      <View style={{
+        backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5',
+        borderRadius: 16, borderBottomLeftRadius: 4, padding: 14,
+        flexDirection: 'row', gap: 5, alignItems: 'center',
+      }}>
+        {dot(dot1)}{dot(dot2)}{dot(dot3)}
+      </View>
+    </View>
   );
 }
 
@@ -243,8 +287,6 @@ export default function RoleplayChat() {
     newVocabulary: string[];
     suggestions: string;
   } | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingText, setStreamingText] = useState('');
   const [wordModal, setWordModal] = useState<{ visible: boolean; word: string; loading: boolean; data: WordExplain | null }>({
     visible: false, word: '', loading: false, data: null,
   });
@@ -273,91 +315,27 @@ export default function RoleplayChat() {
     }
   }
 
-  async function sendMessageStreaming(text: string) {
-    setMessages((prev) => [...prev, { role: 'user', content: text, timestamp: new Date().toISOString() }]);
-    setInput('');
-    setIsStreaming(true);
-    setStreamingText('');
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-
-    const token = useAuthStore.getState().token;
-    let displayBuffer = '';
-    let jsonStarted = false;
-
-    try {
-      const response = await fetch(`${BASE_URL}/roleplay/sessions/${sessionId}/message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content: text }),
-      });
-
-      if (!response.ok || !response.body) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const data = JSON.parse(line.slice(6));
-
-            if (data.type === 'token' && !jsonStarted) {
-              displayBuffer += data.text;
-              const jsonIdx = displayBuffer.indexOf('{"correction"');
-              if (jsonIdx !== -1) {
-                jsonStarted = true;
-                displayBuffer = displayBuffer.slice(0, jsonIdx).trimEnd();
-              }
-              setStreamingText(displayBuffer);
-              scrollRef.current?.scrollToEnd({ animated: false });
-            } else if (data.type === 'done') {
-              setIsStreaming(false);
-              setStreamingText('');
-              setMessages((prev) => {
-                const updated = [...prev];
-                if (data.correction) {
-                  for (let i = updated.length - 1; i >= 0; i--) {
-                    if (updated[i].role === 'user') {
-                      updated[i] = { ...updated[i], correction: data.correction };
-                      break;
-                    }
-                  }
-                }
-                return [...updated, {
-                  role: 'assistant',
-                  content: data.displayText,
-                  timestamp: new Date().toISOString(),
-                }];
-              });
-              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-            } else if (data.type === 'error') {
-              throw new Error(data.error);
+  const sendMutation = useMutation({
+    mutationFn: (text: string) => roleplayApi.sendMessage(sessionId, text).then((r) => r.data),
+    onSuccess: (data, text) => {
+      setMessages((prev) => {
+        const updated = [...prev];
+        if (data.correction) {
+          for (let i = updated.length - 1; i >= 0; i--) {
+            if (updated[i].role === 'user') {
+              updated[i] = { ...updated[i], correction: data.correction };
+              break;
             }
-          } catch {
-            // ignore individual parse errors
           }
         }
-      }
-    } catch (err: any) {
-      setIsStreaming(false);
-      setStreamingText('');
-      Alert.alert('Hata', err.message ?? 'Mesaj gönderilemedi');
-    }
-  }
+        return [...updated, { role: 'assistant', content: data.reply, timestamp: new Date().toISOString() }];
+      });
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    },
+    onError: (err: any) => {
+      Alert.alert('Hata', err.response?.data?.error ?? 'Mesaj gönderilemedi');
+    },
+  });
 
   const endMutation = useMutation({
     mutationFn: () => roleplayApi.endSession(sessionId).then((r) => r.data),
@@ -373,8 +351,19 @@ export default function RoleplayChat() {
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || isStreaming) return;
-    sendMessageStreaming(text);
+    if (!text || sendMutation.isPending) return;
+    setMessages((prev) => [...prev, { role: 'user', content: text, timestamp: new Date().toISOString() }]);
+    setInput('');
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    sendMutation.mutate(text);
+  };
+
+  const sendHint = () => {
+    if (sendMutation.isPending) return;
+    const hint = "Could you give me a hint or suggestion for what I should say next?";
+    setMessages((prev) => [...prev, { role: 'user', content: hint, timestamp: new Date().toISOString() }]);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    sendMutation.mutate(hint);
   };
 
   useEffect(() => {
@@ -410,11 +399,8 @@ export default function RoleplayChat() {
             </Text>
           </View>
           <TouchableOpacity
-            onPress={() => {
-              const hintMsg = "Could you give me a hint or suggestion for what I should say next?";
-              sendMessageStreaming(hintMsg);
-            }}
-            disabled={isStreaming}
+            onPress={sendHint}
+            disabled={sendMutation.isPending}
             style={{ backgroundColor: 'rgba(115,85,247,0.08)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(115,85,247,0.2)' }}
           >
             <Text style={{ color: '#7355F7', fontSize: 11, fontWeight: '600' }}>İpucu</Text>
@@ -474,24 +460,7 @@ export default function RoleplayChat() {
               </View>
             ))
           )}
-          {isStreaming && streamingText ? (
-            <View style={{ alignItems: 'flex-start', marginBottom: 8 }}>
-              <View style={{ maxWidth: '80%', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 16, borderBottomLeftRadius: 4, padding: 12 }}>
-                <Text style={{ color: '#110D24', fontSize: 15, lineHeight: 22 }}>{streamingText}</Text>
-                <View style={{ flexDirection: 'row', gap: 3, marginTop: 6 }}>
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#7355F7', opacity: 0.8 }} />
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#7355F7', opacity: 0.5 }} />
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#7355F7', opacity: 0.3 }} />
-                </View>
-              </View>
-            </View>
-          ) : isStreaming ? (
-            <View style={{ alignItems: 'flex-start', paddingLeft: 4, marginBottom: 8 }}>
-              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#E4E1F5' }}>
-                <ActivityIndicator size="small" color="#7355F7" />
-              </View>
-            </View>
-          ) : null}
+          {sendMutation.isPending && <TypingIndicator />}
         </ScrollView>
 
         <View style={{ flexDirection: 'row', padding: 12, gap: 10, borderTopWidth: 1, borderTopColor: '#E4E1F5', alignItems: 'flex-end' }}>
@@ -515,9 +484,9 @@ export default function RoleplayChat() {
           />
           <TouchableOpacity
             onPress={handleSend}
-            disabled={!input.trim() || isStreaming}
+            disabled={!input.trim() || sendMutation.isPending}
             style={{
-              backgroundColor: input.trim() && !isStreaming ? '#7355F7' : '#F0EEF9',
+              backgroundColor: input.trim() && !sendMutation.isPending ? '#7355F7' : '#F0EEF9',
               borderRadius: 20,
               width: 40,
               height: 40,
@@ -525,7 +494,7 @@ export default function RoleplayChat() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="send" size={18} color={input.trim() && !isStreaming ? '#fff' : '#9B94CC'} />
+            <Ionicons name="send" size={18} color={input.trim() && !sendMutation.isPending ? '#fff' : '#9B94CC'} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

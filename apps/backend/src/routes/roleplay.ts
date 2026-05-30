@@ -189,25 +189,9 @@ router.post('/sessions/:id/message', requireApiKey, async (req: AuthRequest, res
     }));
     apiMessages.push({ role: 'user', content: content.trim() });
 
-    // SSE streaming response
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
-
-    let fullText = '';
-    const stream = claudeService.chatStream(req.apiKey!, apiMessages, systemPrompt);
-
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        const text = (event.delta as any).text as string;
-        fullText += text;
-        res.write(`data: ${JSON.stringify({ type: 'token', text })}\n\n`);
-      }
-    }
-
-    const { displayText, correction, newWords } = parseRoleplayMessage(fullText);
+    const response = await claudeService.chat(req.apiKey!, apiMessages, systemPrompt);
+    const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const { displayText, correction, newWords } = parseRoleplayMessage(rawText);
 
     const updatedMessages = [
       ...history,
@@ -223,16 +207,10 @@ router.post('/sessions/:id/message', requireApiKey, async (req: AuthRequest, res
       data: { messages: updatedMessages, wordsUsed: allWords },
     });
 
-    res.write(`data: ${JSON.stringify({ type: 'done', displayText, correction, newWords })}\n\n`);
-    res.end();
+    res.json({ reply: displayText, correction, newWords });
   } catch (err) {
     console.error('[roleplay/message]', err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Mesaj gönderilemedi' });
-    } else {
-      res.write(`data: ${JSON.stringify({ type: 'error', error: 'Mesaj gönderilemedi' })}\n\n`);
-      res.end();
-    }
+    res.status(500).json({ error: 'Mesaj gönderilemedi' });
   }
 });
 
