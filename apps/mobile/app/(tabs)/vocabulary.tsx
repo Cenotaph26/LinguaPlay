@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vocabularyApi, profileApi, UserWord } from '../../services/api';
+import { useAIFeature } from '../../hooks/useAIFeature';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -49,6 +50,7 @@ export default function Vocabulary() {
   const [explainData, setExplainData] = useState<ExplainData | null>(null);
   const [explainLoading, setExplainLoading] = useState(false);
   const queryClient = useQueryClient();
+  const { requireAI } = useAIFeature();
 
   const { data: dueData, isLoading: dueLoading } = useQuery({
     queryKey: ['vocabulary-due'],
@@ -199,7 +201,7 @@ export default function Vocabulary() {
                   </View>
                 ) : (
                   <TouchableOpacity
-                    onPress={fetchExplanation}
+                    onPress={() => requireAI(fetchExplanation, 'AI Kelime Açıklaması')}
                     disabled={explainLoading}
                     style={{ backgroundColor: '#7355F7', borderRadius: 12, paddingVertical: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 16 }}
                   >

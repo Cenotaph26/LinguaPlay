@@ -11,6 +11,8 @@ export interface UserData {
   hasApiKey: boolean;
   xp?: number;
   streak?: number;
+  aiProvider?: 'GEMINI' | 'CLAUDE' | null;
+  onboardingDone?: boolean;
 }
 
 export interface Word {
@@ -165,4 +167,9 @@ export const quizApi = {
     api.get<{ questions: QuizQuestion[] }>('/quiz/generate', { params }),
   submit: (answers: Array<{ questionId: number; answer: string }>, questions: Array<{ id: number; correctAnswer: string }>) =>
     api.post<{ score: number; total: number; percentage: number; results: Array<{ questionId: number; correct: boolean; correctAnswer: string; userAnswer: string }> }>('/quiz/submit', { answers, questions }),
+};
+
+export const gamificationApi = {
+  getBadges: () => api.get('/gamification/badges'),
+  getStats:  () => api.get('/gamification/stats'),
 };

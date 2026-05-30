@@ -10,6 +10,7 @@ import vocabularyRouter from './routes/vocabulary';
 import roleplayRouter from './routes/roleplay';
 import contentRouter from './routes/content';
 import quizRouter from './routes/quiz';
+import gamificationRouter from './routes/gamification';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/vocabulary', vocabularyRouter);
 app.use('/roleplay', roleplayRouter);
 app.use('/content', contentRouter);
 app.use('/quiz', quizRouter);
+app.use('/gamification', gamificationRouter);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
