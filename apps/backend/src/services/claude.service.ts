@@ -124,7 +124,7 @@ Return JSON only:
   ): Promise<{
     questions: {
       id: number;
-      type: 'multiple_choice' | 'fill_blank' | 'translation';
+      type: 'multiple_choice' | 'fill_blank' | 'translation' | 'context_match';
       question: string;
       options?: string[];
       correctAnswer: string;
@@ -145,9 +145,10 @@ Return JSON only:
 {"questions": [
   {"id": 1, "type": "multiple_choice", "question": "What does X mean?", "options": ["a","b","c","d"], "correctAnswer": "a"},
   {"id": 2, "type": "fill_blank", "question": "She ___ to the store.", "correctAnswer": "went"},
-  {"id": 3, "type": "translation", "question": "Translate: ...", "correctAnswer": "..."}
+  {"id": 3, "type": "translation", "question": "Translate: ...", "correctAnswer": "..."},
+  {"id": 4, "type": "context_match", "question": "Which sentence uses 'elaborate' correctly?", "options": ["She gave an elaborate explanation.", "She elaborate the plan.", "She was elaborate.", "She elaborate beautifully."], "correctAnswer": "She gave an elaborate explanation."}
 ]}
-Mix the three types evenly.`,
+Mix all four types evenly. For context_match, always provide 4 complete sentences as options — only one must be grammatically and semantically correct.`,
       }],
     });
     const raw = resp.content[0].type === 'text' ? resp.content[0].text : '';

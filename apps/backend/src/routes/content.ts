@@ -5,6 +5,20 @@ import { requireApiKey } from '../middleware/apiKey';
 import { claudeService } from '../services/claude.service';
 import { youtubeService } from '../services/youtube.service';
 import axios from 'axios';
+import pdfParse from 'pdf-parse';
+
+function parseSrt(srt: string): string {
+  return srt
+    .replace(/^\d+\s*$/gm, '')
+    .replace(/\d{2}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}[,.]\d{3}/g, '')
+    .replace(/<[^>]+>/g, '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 const router = Router();
 router.use(requireAuth);
@@ -76,28 +90,40 @@ async function processContent(itemId: string, apiKey: string, level: string) {
 
 router.post('/', requireApiKey, async (req: AuthRequest, res: Response) => {
   try {
-    const { url, type, title, transcript } = req.body as {
+    const { url, type, title, transcript, fileBase64, fileName } = req.body as {
       url?: string; type?: string; title?: string; transcript?: string;
+      fileBase64?: string; fileName?: string;
     };
     if (!type || !['YOUTUBE', 'ARTICLE', 'SUBTITLE', 'PDF'].includes(type)) {
       res.status(400).json({ error: 'Geçerli bir içerik türü seçin' });
       return;
     }
-    if (!url && !transcript) {
-      res.status(400).json({ error: 'URL veya transcript gerekli' });
+    if (!url && !transcript && !fileBase64) {
+      res.status(400).json({ error: 'URL, transcript veya dosya gerekli' });
       return;
     }
 
     const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { level: true } });
     const level = user?.level ?? 'B1';
 
+    let resolvedTranscript = transcript;
     let itemTitle = title ?? url ?? 'İçerik';
-    if (!title && url && type === 'YOUTUBE') {
+
+    if (fileBase64 && type === 'PDF') {
+      const buffer = Buffer.from(fileBase64, 'base64');
+      const pdfData = await pdfParse(buffer);
+      resolvedTranscript = pdfData.text.slice(0, 10000);
+      itemTitle = title ?? fileName?.replace(/\.pdf$/i, '') ?? 'PDF';
+    } else if (fileBase64 && type === 'SUBTITLE') {
+      const srtText = Buffer.from(fileBase64, 'base64').toString('utf-8');
+      resolvedTranscript = parseSrt(srtText);
+      itemTitle = title ?? fileName?.replace(/\.(srt|vtt)$/i, '') ?? 'Altyazı';
+    } else if (!title && url && type === 'YOUTUBE') {
       itemTitle = `YouTube: ${url.slice(-11)}`;
     }
 
     const item = await prisma.contentItem.create({
-      data: { userId: req.userId, type: type as any, url, title: itemTitle, transcript, status: 'PENDING' },
+      data: { userId: req.userId, type: type as any, url, title: itemTitle, transcript: resolvedTranscript, status: 'PENDING' },
     });
 
     processContent(item.id, req.apiKey!, level).catch(err => console.error('[content bg process]', err));

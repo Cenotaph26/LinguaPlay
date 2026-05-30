@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vocabularyApi } from '../services/api';
+import * as Speech from 'expo-speech';
 
 const QUALITY_BUTTONS: Array<{ label: string; quality: 0 | 1 | 2 | 3; color: string }> = [
   { label: 'Tekrar', quality: 0, color: '#E84E32' },
@@ -18,6 +20,17 @@ export default function Review() {
   const [revealed, setRevealed] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [done, setDone] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+
+  function speakWord(word: string) {
+    if (speaking) { Speech.stop(); setSpeaking(false); return; }
+    setSpeaking(true);
+    Speech.speak(word, {
+      language: 'en',
+      onDone: () => setSpeaking(false),
+      onError: () => setSpeaking(false),
+    });
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['vocabulary-due'],
@@ -123,9 +136,15 @@ export default function Review() {
           className="bg-bg2 border border-border rounded-2xl p-6 mb-6"
           style={{ minHeight: 200, justifyContent: 'center', alignItems: 'center' }}
         >
-          <Text className="text-text1 text-3xl font-bold mb-2">
-            {current.word}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+            <Text className="text-text1 text-3xl font-bold">{current.word}</Text>
+            <TouchableOpacity
+              onPress={() => speakWord(current.word)}
+              style={{ backgroundColor: speaking ? 'rgba(115,85,247,0.15)' : '#F0EEF9', borderRadius: 20, padding: 7, borderWidth: 1, borderColor: speaking ? '#7355F7' : '#E4E1F5' }}
+            >
+              <Ionicons name={speaking ? 'stop' : 'volume-medium-outline'} size={16} color={speaking ? '#7355F7' : '#9B94CC'} />
+            </TouchableOpacity>
+          </View>
           {current.phonetic ? (
             <Text className="text-text3 text-base mb-4">{current.phonetic}</Text>
           ) : null}

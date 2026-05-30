@@ -31,6 +31,12 @@
         {
           "faceIDPermission": "Allow LinguaPlay to access Face ID."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#7355F7"
+        }
       ]
     ],
     "experiments": {

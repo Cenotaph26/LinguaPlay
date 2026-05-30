@@ -189,9 +189,9 @@ router.post('/sessions/:id/message', requireApiKey, async (req: AuthRequest, res
     }));
     apiMessages.push({ role: 'user', content: content.trim() });
 
-    const reply = await claudeService.chat(req.apiKey!, apiMessages, systemPrompt);
-    const replyText = reply.content[0].type === 'text' ? reply.content[0].text : '';
-    const { displayText, correction, newWords } = parseRoleplayMessage(replyText);
+    const response = await claudeService.chat(req.apiKey!, apiMessages, systemPrompt);
+    const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const { displayText, correction, newWords } = parseRoleplayMessage(rawText);
 
     const updatedMessages = [
       ...history,
@@ -225,6 +225,24 @@ router.post('/sessions/:id/end', requireApiKey, async (req: AuthRequest, res: Re
     const feedback = await claudeService.sessionFeedback(req.apiKey!, messages, user?.level ?? 'B1');
 
     await prisma.rolePlaySession.update({ where: { id }, data: { feedback: JSON.stringify(feedback) } });
+
+    // Auto-add encountered words to user's vocabulary
+    const wordsUsed = (session.wordsUsed ?? []) as string[];
+    if (wordsUsed.length > 0) {
+      const dbWords = await prisma.word.findMany({
+        where: { word: { in: wordsUsed.map((w) => w.toLowerCase()) } },
+      });
+      await Promise.all(
+        dbWords.map((dbWord) =>
+          prisma.userWord.upsert({
+            where: { userId_wordId: { userId: req.userId, wordId: dbWord.id } },
+            create: { userId: req.userId, wordId: dbWord.id },
+            update: {},
+          })
+        )
+      );
+    }
+
     res.json(feedback);
   } catch (err) {
     console.error('[roleplay/end]', err);

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { secureStorage } from '../utils/secureStorage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://linguaplay-production-94c0.up.railway.app';
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://linguaplay-production-94c0.up.railway.app';
 
 export interface UserData {
   id: string;
@@ -82,7 +82,7 @@ export interface RolePlaySession {
 
 export interface QuizQuestion {
   id: number;
-  type: 'multiple_choice' | 'fill_blank' | 'translation';
+  type: 'multiple_choice' | 'fill_blank' | 'translation' | 'context_match';
   question: string;
   options?: string[];
   correctAnswer: string;
@@ -111,6 +111,7 @@ export const authApi = {
 export const profileApi = {
   setApiKey: (apiKey: string) => api.put('/profile/apikey', { apiKey }),
   deleteApiKey: () => api.delete('/profile/apikey'),
+  testApiKey: (apiKey: string) => api.post<{ valid: boolean; error?: string }>('/profile/apikey/test', { apiKey }),
   updateSettings: (data: { uiLanguage?: string; level?: string }) =>
     api.put<UserData>('/profile/settings', data),
   getStats: () =>
@@ -134,6 +135,8 @@ export const vocabularyApi = {
   addWord: (data: { word: string; definition: string; definitionTr: string; examples?: string[]; phonetic?: string; level: string }) =>
     api.post<UserWord>('/vocabulary/add', data),
   saveWord: (word: string) => api.post<UserWord>('/vocabulary/save', { word }),
+  explainWordByString: (word: string, context?: string) =>
+    api.post<{ word: string; definition: string; definitionTr: string; phonetic: string; examples: string[]; synonyms: string[] }>('/vocabulary/explain', { word, context }),
 };
 
 export const roleplayApi = {
@@ -149,7 +152,7 @@ export const roleplayApi = {
 };
 
 export const contentApi = {
-  addContent: (data: { type: string; url?: string; title?: string; transcript?: string }) =>
+  addContent: (data: { type: string; url?: string; title?: string; transcript?: string; fileBase64?: string; fileName?: string }) =>
     api.post<ContentItem>('/content', data),
   getContent: () => api.get<ContentItem[]>('/content'),
   getContentById: (id: string) => api.get<ContentDetail>(`/content/${id}`),

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert,
+  TextInput, ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/authStore';
 import { profileApi } from '../../services/api';
 import i18n from '../../utils/i18n';
+import * as Notifications from 'expo-notifications';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: false,
+    shouldSetBadge: true,
+  }),
+});
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -38,7 +47,9 @@ export default function Profile() {
   const { user, setUser, logout } = useAuthStore();
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
+  const [notifTime, setNotifTime] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState(false);
+  const [testingKey, setTestingKey] = useState(false);
   const [deletingKey, setDeletingKey] = useState(false);
   const [editingKey, setEditingKey] = useState(false);
   const [changingLang, setChangingLang] = useState(false);
@@ -56,6 +67,23 @@ export default function Profile() {
   const displayName = user?.email?.split('@')[0] ?? '—';
   const streak = stats?.streak ?? 0;
   const xp = stats?.xp ?? 0;
+
+  async function handleTestApiKey() {
+    if (!apiKey.trim()) return;
+    setTestingKey(true);
+    try {
+      const { data } = await profileApi.testApiKey(apiKey.trim());
+      if (data.valid) {
+        Alert.alert('Bağlantı Başarılı', 'API anahtarı geçerli. Kaydedebilirsiniz.');
+      } else {
+        Alert.alert('Geçersiz Anahtar', data.error ?? 'API anahtarı doğrulanamadı.');
+      }
+    } catch {
+      Alert.alert('Hata', 'Test sırasında hata oluştu.');
+    } finally {
+      setTestingKey(false);
+    }
+  }
 
   async function handleSaveApiKey() {
     if (!apiKey.trim()) return;
@@ -104,6 +132,33 @@ export default function Profile() {
     } finally {
       setChangingLang(false);
     }
+  }
+
+  async function scheduleReminder(time: string) {
+    const [hour, minute] = time.split(':').map(Number);
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin Gerekli', 'Bildirim izni verilmedi. Ayarlardan açabilirsiniz.');
+      return;
+    }
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    if (Platform.OS !== 'web') {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Kelime tekrar zamanı!',
+          body: 'Bugünkü kelimelerini tekrar etmeyi unutma.',
+          data: { screen: 'review' },
+        },
+        trigger: { hour, minute, repeats: true } as any,
+      });
+    }
+    setNotifTime(time);
+    Alert.alert('Hatırlatıcı Kuruldu', `Her gün ${time}'de hatırlatıcı alacaksın.`);
+  }
+
+  async function cancelReminder() {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    setNotifTime(null);
   }
 
   function handleLanguageTap() {
@@ -171,7 +226,7 @@ export default function Profile() {
 
             {(!hasApiKey || editingKey) ? (
               <>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <View style={{ flex: 1, backgroundColor: '#F0EEF9', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center' }}>
                     <TextInput
                       style={{ flex: 1, color: '#110D24', fontSize: 13 }}
@@ -187,10 +242,22 @@ export default function Profile() {
                       <Ionicons name={showKey ? 'eye-off-outline' : 'eye-outline'} size={16} color="#9B94CC" />
                     </TouchableOpacity>
                   </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={handleTestApiKey}
+                    disabled={testingKey || apiKey.trim().length < 20}
+                    style={{ flex: 1, backgroundColor: '#F0EEF9', borderRadius: 8, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: apiKey.trim().length >= 20 ? '#7355F7' : '#E4E1F5' }}
+                  >
+                    {testingKey
+                      ? <ActivityIndicator color="#7355F7" size="small" />
+                      : <Text style={{ color: apiKey.trim().length >= 20 ? '#7355F7' : '#9B94CC', fontWeight: '600', fontSize: 13 }}>Test Et</Text>
+                    }
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleSaveApiKey}
                     disabled={savingKey || apiKey.trim().length < 20}
-                    style={{ backgroundColor: apiKey.trim().length >= 20 ? '#7355F7' : '#E4E1F5', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10 }}
+                    style={{ flex: 1, backgroundColor: apiKey.trim().length >= 20 ? '#7355F7' : '#E4E1F5', borderRadius: 8, paddingVertical: 10, alignItems: 'center' }}
                   >
                     {savingKey
                       ? <ActivityIndicator color="#fff" size="small" />
@@ -245,8 +312,16 @@ export default function Profile() {
             <SettingRow
               icon="notifications-outline"
               label="Hatırlatıcılar"
-              value="09:00"
-              onPress={() => Alert.alert('Yakında', 'Bildirim ayarları yakında geliyor.')}
+              value={notifTime ?? 'Kapalı'}
+              onPress={async () => {
+                const TIMES = ['08:00', '09:00', '12:00', '18:00', '21:00'];
+                const options = [
+                  ...TIMES.map((t) => ({ text: t, onPress: () => scheduleReminder(t) })),
+                  { text: 'Bildirimi Kapat', style: 'destructive' as const, onPress: cancelReminder },
+                  { text: 'İptal', style: 'cancel' as const },
+                ];
+                Alert.alert('Günlük Hatırlatıcı', 'Tekrar hatırlatma saatini seç', options);
+              }}
             />
             <SettingRow
               icon="clipboard-outline"
