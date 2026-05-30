@@ -30,6 +30,7 @@ model User {
   contentItems  ContentItem[]
   quizResults   QuizResult[]
   badges        UserBadge[]
+  textProgress  UserTextProgress[]
 }
 
 enum AIProvider {
@@ -115,6 +116,8 @@ model RolePlayScene {
   createdAt     DateTime @default(now())
 
   sessions      RolePlaySession[]
+
+  @@unique([titleEn])
 }
 
 model RolePlaySession {
@@ -220,4 +223,33 @@ model UserBadge {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   badge    Badge    @relation(fields: [badgeId], references: [id])
   @@unique([userId, badgeId])
+}
+
+model ReadingText {
+  id              String   @id @default(cuid())
+  title           String
+  level           Level
+  category        String   // news | story | article | dialogue | science | business
+  text            String
+  wordCount       Int
+  readingTimeMin  Int
+  audioUrl        String?
+  keyPhrases      Json     // [{phrase: string, tr: string}]
+  comprehensionQs Json     // [{question: string, options: string[], answerIndex: number}]
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  userProgress UserTextProgress[]
+}
+
+model UserTextProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  textId    String
+  completed Boolean  @default(false)
+  score     Int?
+  readAt    DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      ReadingText @relation(fields: [textId], references: [id])
+  @@unique([userId, textId])
 }
