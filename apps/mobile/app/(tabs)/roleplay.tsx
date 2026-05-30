@@ -12,13 +12,13 @@ import { useAuthStore } from '../../stores/authStore';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  daily: '☕',
-  work: '💼',
-  travel: '✈️',
-  emergency: '🏥',
-  social: '💬',
-  shopping: '🛍️',
+const CATEGORY_ICON: Record<string, { icon: IconName; color: string }> = {
+  daily:     { icon: 'cafe-outline',      color: '#F59E0B' },
+  work:      { icon: 'briefcase-outline', color: '#7355F7' },
+  travel:    { icon: 'airplane-outline',  color: '#0E9E80' },
+  emergency: { icon: 'medical-outline',   color: '#E84E32' },
+  social:    { icon: 'people-outline',    color: '#7355F7' },
+  shopping:  { icon: 'bag-outline',       color: '#0E9E80' },
 };
 
 const CATEGORY_FILTERS: Array<{ id: string; label: string; icon: IconName }> = [
@@ -155,14 +155,16 @@ export default function Roleplay() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {(filteredScenes as RolePlayScene[]).map((scene) => {
                 const lc = LEVEL_COLORS[scene.difficulty] ?? '#9B94CC';
-                const emoji = CATEGORY_EMOJI[scene.category] ?? '💬';
+                const catIcon = CATEGORY_ICON[scene.category] ?? { icon: 'chatbubble-outline' as IconName, color: '#7355F7' };
                 return (
                   <TouchableOpacity
                     key={scene.id}
                     onPress={() => handleScenePress(scene)}
                     style={{ width: '48.5%', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E4E1F5', borderRadius: 14, padding: 14, shadowColor: '#7355F7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
                   >
-                    <Text style={{ fontSize: 22, marginBottom: 8 }}>{emoji}</Text>
+                    <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: catIcon.color + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                      <Ionicons name={catIcon.icon} size={18} color={catIcon.color} />
+                    </View>
                     <Text style={{ fontSize: 13, fontWeight: '600', color: '#110D24', lineHeight: 18, marginBottom: 8, flex: 1 }}>{scene.titleTr}</Text>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <View style={{ backgroundColor: lc + '1a', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: lc + '40' }}>
@@ -194,7 +196,11 @@ export default function Roleplay() {
             {sceneModal && (
               <>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                  <Text style={{ fontSize: 32 }}>{CATEGORY_EMOJI[sceneModal.category] ?? '💬'}</Text>
+                  {(() => { const ci = CATEGORY_ICON[sceneModal.category] ?? { icon: 'chatbubble-outline' as IconName, color: '#7355F7' }; return (
+                    <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: ci.color + '18', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Ionicons name={ci.icon} size={22} color={ci.color} />
+                    </View>
+                  ); })()}
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: '#110D24', fontSize: 17, fontWeight: '700' }}>{sceneModal.titleTr}</Text>
                     <Text style={{ color: '#9B94CC', fontSize: 12, marginTop: 2 }}>{sceneModal.descriptionTr}</Text>
