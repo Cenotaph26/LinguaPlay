@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Pre
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { vocabularyApi, profileApi, UserWord } from '../../services/api';
+import { vocabularyApi, profileApi, UserWord, BrowseWord } from '../../services/api';
 import { useAIFeature } from '../../hooks/useAIFeature';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -39,7 +39,9 @@ interface ExplainData {
 }
 
 export default function Vocabulary() {
-  const [tab, setTab] = useState<'review' | 'list'>('review');
+  const [tab, setTab] = useState<'review' | 'list' | 'browse'>('review');
+  const [browseLevel, setBrowseLevel] = useState('');
+  const [browseSearch, setBrowseSearch] = useState('');
   const [cardIndex, setCardIndex] = useState(0);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [doneToday, setDoneToday] = useState(false);
@@ -63,6 +65,27 @@ export default function Vocabulary() {
     queryFn: () => vocabularyApi.getWords(listFilter && listFilter !== 'TODAY' ? { status: listFilter } : {}).then((r) => r.data),
     staleTime: 30000,
   });
+
+  const { data: browseData, isLoading: browseLoading } = useQuery({
+    queryKey: ['vocabulary-browse', browseLevel, browseSearch],
+    queryFn: () =>
+      vocabularyApi.browse({
+        level: browseLevel || undefined,
+        q: browseSearch.trim() || undefined,
+        limit: 50,
+      }).then((r) => r.data),
+    staleTime: 30000,
+  });
+
+  const addWordMutation = useMutation({
+    mutationFn: (word: string) => vocabularyApi.saveWord(word),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vocabulary-browse'] });
+      queryClient.invalidateQueries({ queryKey: ['vocabulary-words'] });
+      queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
+    },
+  });
+
 
   const { data: stats } = useQuery({
     queryKey: ['profile-stats'],
@@ -258,7 +281,7 @@ export default function Vocabulary() {
 
           {/* Tab switcher */}
           <View style={{ flexDirection: 'row', backgroundColor: '#F0EEF9', borderRadius: 10, padding: 3, marginTop: 14 }}>
-            {([['review', 'Tekrar Et'], ['list', 'Kelime Listem']] as const).map(([t, label]) => (
+            {([['review', 'Tekrar'], ['list', 'Listem'], ['browse', 'Keşfet']] as const).map(([t, label]) => (
               <TouchableOpacity
                 key={t}
                 onPress={() => setTab(t)}
@@ -267,7 +290,7 @@ export default function Vocabulary() {
                   backgroundColor: tab === t ? '#7355F7' : 'transparent',
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: '600', color: tab === t ? '#fff' : '#6B638F' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: tab === t ? '#fff' : '#6B638F' }}>
                   {label}{t === 'review' && dueCount > 0 ? ` (${dueCount})` : ''}
                 </Text>
               </TouchableOpacity>
@@ -473,7 +496,81 @@ export default function Vocabulary() {
                 </View>
               )}
             </>
-          )}
+          ) : tab === 'browse' ? (
+            <>
+              {/* Browse search */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0EEF9', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 10, gap: 8 }}>
+                <Ionicons name="search-outline" size={16} color="#9B94CC" />
+                <TextInput
+                  style={{ flex: 1, color: '#110D24', fontSize: 14 }}
+                  placeholder="Kelime ara..."
+                  placeholderTextColor="#9B94CC"
+                  value={browseSearch}
+                  onChangeText={setBrowseSearch}
+                />
+              </View>
+
+              {/* Level filter */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {['', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((lvl) => (
+                    <TouchableOpacity
+                      key={lvl}
+                      onPress={() => setBrowseLevel(lvl)}
+                      style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: browseLevel === lvl ? '#7355F7' : '#fff', borderWidth: 1, borderColor: browseLevel === lvl ? '#7355F7' : '#E4E1F5' }}
+                    >
+                      <Text style={{ color: browseLevel === lvl ? '#fff' : '#6B638F', fontWeight: '600', fontSize: 12 }}>
+                        {lvl || 'Tümü'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+
+              {browseLoading ? (
+                <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                  <ActivityIndicator color="#7355F7" />
+                </View>
+              ) : (
+                <View style={{ gap: 6 }}>
+                  {(browseData?.words ?? [] as BrowseWord[]).map((item) => {
+                    const lc = LEVEL_COLORS[item.level] ?? '#9B94CC';
+                    return (
+                      <View
+                        key={item.id}
+                        style={{ backgroundColor: '#fff', borderRadius: 12, paddingVertical: 11, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: item.added ? 'rgba(14,158,128,0.25)' : '#E4E1F5', shadowColor: '#7355F7', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '600', color: '#110D24' }}>{item.word}</Text>
+                            {item.phonetic && <Text style={{ fontSize: 11, color: '#9B94CC', fontStyle: 'italic' }}>{item.phonetic}</Text>}
+                            <View style={{ backgroundColor: lc + '18', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+                              <Text style={{ color: lc, fontSize: 9, fontWeight: '700' }}>{item.level}</Text>
+                            </View>
+                          </View>
+                          <Text style={{ fontSize: 12, color: '#9B94CC' }} numberOfLines={1}>{item.definitionTr}</Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => !item.added && addWordMutation.mutate(item.word)}
+                          disabled={item.added || addWordMutation.isPending}
+                          style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: item.added ? 'rgba(14,158,128,0.10)' : 'rgba(115,85,247,0.10)', borderWidth: 1, borderColor: item.added ? 'rgba(14,158,128,0.25)' : 'rgba(115,85,247,0.25)' }}
+                        >
+                          <Text style={{ color: item.added ? '#0E9E80' : '#7355F7', fontWeight: '700', fontSize: 11 }}>
+                            {item.added ? '✓ Eklendi' : '+ Ekle'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                  {(browseData?.total ?? 0) > 0 && (
+                    <Text style={{ color: '#9B94CC', fontSize: 11, textAlign: 'center', marginTop: 4 }}>
+                      {browseData?.total} kelime
+                    </Text>
+                  )}
+                </View>
+              )}
+            </>
+          ) : null}
         </ScrollView>
       </View>
     </SafeAreaView>

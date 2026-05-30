@@ -126,7 +126,22 @@ export const placementApi = {
     api.post<{ level: string; explanation: string; score: number }>('/placement/evaluate', { answers }),
 };
 
+export interface BrowseWord {
+  id: string;
+  word: string;
+  level: string;
+  definition: string;
+  definitionTr: string;
+  phonetic?: string;
+  examples: string[];
+  added: boolean;
+  userWordId: string | null;
+  status: string | null;
+}
+
 export const vocabularyApi = {
+  browse: (params?: { level?: string; q?: string; page?: number; limit?: number }) =>
+    api.get<{ words: BrowseWord[]; total: number; page: number; pages: number }>('/vocabulary/browse', { params }),
   getWords: (params?: { status?: string; page?: number; limit?: number }) =>
     api.get<{ words: UserWord[]; total: number; page: number; pages: number }>('/vocabulary/words', { params }),
   getDue: () => api.get<UserWord[]>('/vocabulary/due'),
