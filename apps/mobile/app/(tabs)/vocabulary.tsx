@@ -438,7 +438,7 @@ export default function Vocabulary() {
                 </View>
               )}
             </>
-          ) : (
+          ) : tab === 'list' ? (
             <>
               {/* Filter chips */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
