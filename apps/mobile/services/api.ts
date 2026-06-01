@@ -111,9 +111,11 @@ export const authApi = {
 };
 
 export const profileApi = {
-  setApiKey: (apiKey: string) => api.put('/profile/apikey', { apiKey }),
+  setApiKey: (apiKey: string, provider: 'CLAUDE' | 'GEMINI' = 'CLAUDE') =>
+    api.put('/profile/apikey', { apiKey, provider }),
   deleteApiKey: () => api.delete('/profile/apikey'),
-  testApiKey: (apiKey: string) => api.post<{ valid: boolean; error?: string }>('/profile/apikey/test', { apiKey }),
+  testApiKey: (apiKey: string, provider: 'CLAUDE' | 'GEMINI' = 'CLAUDE') =>
+    api.post<{ valid: boolean; error?: string }>('/profile/apikey/test', { apiKey, provider }),
   updateSettings: (data: { uiLanguage?: string; level?: string }) =>
     api.put<UserData>('/profile/settings', data),
   getStats: () =>
