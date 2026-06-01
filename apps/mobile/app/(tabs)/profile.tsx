@@ -46,6 +46,7 @@ function SettingRow({ icon, label, value, onPress, iconBg, iconColor, danger }: 
 export default function Profile() {
   const { user, setUser, logout } = useAuthStore();
   const [apiKey, setApiKey] = useState('');
+  const [provider, setProvider] = useState<'CLAUDE' | 'GEMINI'>('GEMINI');
   const [showKey, setShowKey] = useState(false);
   const [notifTime, setNotifTime] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState(false);
@@ -72,7 +73,7 @@ export default function Profile() {
     if (!apiKey.trim()) return;
     setTestingKey(true);
     try {
-      const { data } = await profileApi.testApiKey(apiKey.trim());
+      const { data } = await profileApi.testApiKey(apiKey.trim(), provider);
       if (data.valid) {
         Alert.alert('Bağlantı Başarılı', 'API anahtarı geçerli. Kaydedebilirsiniz.');
       } else {
@@ -89,7 +90,7 @@ export default function Profile() {
     if (!apiKey.trim()) return;
     setSavingKey(true);
     try {
-      await profileApi.setApiKey(apiKey.trim());
+      await profileApi.setApiKey(apiKey.trim(), provider);
       setUser({ ...user!, hasApiKey: true });
       setApiKey('');
       setEditingKey(false);
@@ -213,24 +214,39 @@ export default function Profile() {
 
           {/* ── API Key ─────────────────────────────────────── */}
           <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.7, textTransform: 'uppercase', color: '#9B94CC', marginBottom: 8 }}>
-            Claude API Anahtarı
+            AI Sağlayıcı &amp; API Anahtarı
           </Text>
           <View style={{ backgroundColor: '#ffffff', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#E4E1F5' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 4 }}>
               <Ionicons name="key-outline" size={16} color="#7355F7" />
-              <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 14 }}>API Anahtarı</Text>
+              <Text style={{ color: '#110D24', fontWeight: '600', fontSize: 14 }}>AI API Anahtarı</Text>
             </View>
             <Text style={{ color: '#9B94CC', fontSize: 11, marginBottom: 10 }}>
-              Kendi Anthropic API anahtarınızı girin. AES-256 ile şifrelenip saklanır.
+              Kendi AI API anahtarınızı ekleyerek pratik yapabilirsiniz. AES-256 ile şifrelenip saklanır.
             </Text>
 
             {(!hasApiKey || editingKey) ? (
               <>
+                {/* Provider selector */}
+                <View style={{ flexDirection: 'row', backgroundColor: '#F0EEF9', borderRadius: 12, padding: 3, marginBottom: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => setProvider('GEMINI')}
+                    style={{ flex: 1, paddingVertical: 8, borderRadius: 9, backgroundColor: provider === 'GEMINI' ? '#fff' : 'transparent', alignItems: 'center' }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: provider === 'GEMINI' ? '#0E9E80' : '#6B638F' }}>Gemini (Ücretsiz)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setProvider('CLAUDE')}
+                    style={{ flex: 1, paddingVertical: 8, borderRadius: 9, backgroundColor: provider === 'CLAUDE' ? '#fff' : 'transparent', alignItems: 'center' }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: provider === 'CLAUDE' ? '#7355F7' : '#6B638F' }}>Claude (Ücretli)</Text>
+                  </TouchableOpacity>
+                </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <View style={{ flex: 1, backgroundColor: '#F0EEF9', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center' }}>
                     <TextInput
                       style={{ flex: 1, color: '#110D24', fontSize: 13 }}
-                      placeholder="sk-ant-api03-..."
+                      placeholder={provider === 'GEMINI' ? 'AIzaSy... (Google AI Studio)' : 'sk-ant-... (Anthropic Console)'}
                       placeholderTextColor="#9B94CC"
                       value={apiKey}
                       onChangeText={setApiKey}

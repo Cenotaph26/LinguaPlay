@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
+import axios from 'axios';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { encrypt } from '../services/encryption.service';
@@ -9,21 +10,29 @@ router.use(requireAuth);
 
 router.post('/apikey/test', async (req: AuthRequest, res: Response) => {
   try {
-    const { apiKey } = req.body as { apiKey?: string };
+    const { apiKey, provider = 'CLAUDE' } = req.body as { apiKey?: string; provider?: string };
     if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 20) {
       res.json({ valid: false, error: 'Geçersiz API anahtarı' });
       return;
     }
-    const client = new Anthropic({ apiKey: apiKey.trim() });
-    await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 10,
-      messages: [{ role: 'user', content: 'Hi' }],
-    });
+    if (provider === 'GEMINI') {
+      await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey.trim()}`,
+        { contents: [{ parts: [{ text: 'Hi' }] }] },
+        { timeout: 10000 },
+      );
+    } else {
+      const client = new Anthropic({ apiKey: apiKey.trim() });
+      await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Hi' }],
+      });
+    }
     res.json({ valid: true });
   } catch (err: any) {
-    const status = err?.status ?? err?.statusCode;
-    if (status === 401 || status === 403) {
+    const status = err?.status ?? err?.statusCode ?? err?.response?.status;
+    if (status === 400 || status === 401 || status === 403) {
       res.json({ valid: false, error: 'Geçersiz API anahtarı' });
     } else {
       res.json({ valid: false, error: 'Bağlantı hatası: ' + (err?.message ?? 'Bilinmeyen hata') });
@@ -33,13 +42,14 @@ router.post('/apikey/test', async (req: AuthRequest, res: Response) => {
 
 router.put('/apikey', async (req: AuthRequest, res: Response) => {
   try {
-    const { apiKey } = req.body as { apiKey?: string };
+    const { apiKey, provider = 'CLAUDE' } = req.body as { apiKey?: string; provider?: string };
     if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 20) {
       res.status(400).json({ error: 'Geçersiz API anahtarı' });
       return;
     }
+    const validProvider = provider === 'GEMINI' ? 'GEMINI' : 'CLAUDE';
     const apiKeyEnc = encrypt(apiKey.trim());
-    await prisma.user.update({ where: { id: req.userId }, data: { apiKeyEnc } });
+    await prisma.user.update({ where: { id: req.userId }, data: { apiKeyEnc, aiProvider: validProvider as any } });
     res.json({ success: true });
   } catch (err) {
     console.error('[profile/apikey PUT]', err);
@@ -49,7 +59,7 @@ router.put('/apikey', async (req: AuthRequest, res: Response) => {
 
 router.delete('/apikey', async (req: AuthRequest, res: Response) => {
   try {
-    await prisma.user.update({ where: { id: req.userId }, data: { apiKeyEnc: null } });
+    await prisma.user.update({ where: { id: req.userId }, data: { apiKeyEnc: null, aiProvider: null } });
     res.json({ success: true });
   } catch (err) {
     console.error('[profile/apikey DELETE]', err);
